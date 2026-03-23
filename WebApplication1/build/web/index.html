@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#e30613", // UNA Red
+              "on-primary": "#ffffff",
+              "surface": "#ffffff",
+              "on-surface": "#1a1c1c",
+              "surface-variant": "#f4f4f5",
+              "on-surface-variant": "#52525b",
+              "outline": "#d4d4d8",
+              "background": "#fbfbfb",
+              "on-background": "#09090b",
+            },
+            fontFamily: {
+              "headline": ["Manrope", "sans-serif"],
+              "body": ["Manrope", "sans-serif"],
+              "label": ["Public Sans", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0px", // Monolithic/sharp edges as per Sello UNA
+              "sm": "0px",
+              "md": "0px",
+              "lg": "0px",
+              "xl": "0px",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24
+      }
+      .bg-una-hero {
+        background-image: linear-gradient(rgba(9, 9, 11, 0.85), rgba(9, 9, 11, 0.85)), url(https://lh3.googleusercontent.com/aida-public/AB6AXuDeO74C_tvjkyDBZ1emQFbqGPviotu6nZVnG8EDM5_AoJkIaq8HsomesjO7Zb_jU96_HjTOrp7pFjGE6v-D7C8g_Nu7sQ88dP0c2jlkPQI9KBPSpi1ZXhybqBUa9iELMMj3iJc02xc2F0TwwOHG5Visrj5pmm_ENqR-F58G5VEBLJeSzZLob9JDwP5IS6yoJj8iM8hLkL0g0acEKBOFEIgoFOu0fTKWUhhzDlZNMMr2KD8RiYPIGnXFMPpFDaXur68VtXMkXC8Xhvsu);
+        background-size: cover;
+        background-position: center;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex flex-col">
+<!-- TopNavBar Component -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-8 h-20 bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(26,28,28,0.06)] border-b border-zinc-100">
+<div class="text-2xl font-black tracking-tighter text-primary uppercase font-['Manrope']">
+            UNA Spaces
+        </div>
+<nav class="hidden md:flex items-center gap-10 font-['Manrope'] tracking-tight font-bold uppercase text-xs">
+<a class="text-zinc-600 hover:text-primary transition-colors" href="#">Campus</a>
+<a class="text-zinc-600 hover:text-primary transition-colors" href="#">Regulations</a>
+<a class="text-zinc-600 hover:text-primary transition-colors" href="#">Support</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="px-6 py-2 bg-primary text-on-primary text-xs font-bold uppercase tracking-widest hover:bg-black transition-all">
+                Sign In
+            </button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow flex items-center justify-center relative overflow-hidden bg-una-hero pt-20">
+<!-- Monolithic Login Card -->
+<section class="relative z-10 w-full max-w-md mx-4 my-12">
+<div class="bg-white p-12 md:p-16 shadow-[24px_24px_0px_0px_rgba(227,6,19,0.1)] border border-zinc-200">
+<div class="mb-12 text-center">
+<h1 class="font-headline text-3xl font-extrabold text-on-background tracking-tighter uppercase mb-2">Espacios UNA</h1>
+<div class="h-1 w-12 bg-primary mx-auto mb-4"></div>
+<p class="font-label text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">Institutional Space Procurement</p>
+</div>
+<form action="#" class="space-y-10" method="POST">
+<div class="space-y-8">
+<div class="relative">
+<label class="block font-label text-[10px] uppercase tracking-widest text-zinc-400 mb-2 font-bold" for="email">Institutional Email</label>
+<input class="w-full bg-zinc-50 border-b-2 border-zinc-200 focus:border-primary focus:ring-0 px-4 py-3 font-body text-sm text-on-surface placeholder:text-zinc-300 transition-all duration-300 outline-none" id="email" name="email" placeholder="usuario@una.ac.cr" required="" type="email"/>
+</div>
+<div class="relative">
+<label class="block font-label text-[10px] uppercase tracking-widest text-zinc-400 mb-2 font-bold" for="password">Security Key</label>
+<input class="w-full bg-zinc-50 border-b-2 border-zinc-200 focus:border-primary focus:ring-0 px-4 py-3 font-body text-sm text-on-surface placeholder:text-zinc-300 transition-all duration-300 outline-none" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<div class="flex items-center justify-between font-label text-[11px] uppercase tracking-wider font-bold">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 border-2 border-zinc-300 text-primary focus:ring-0 rounded-none transition-all" type="checkbox"/>
+<span class="text-zinc-500 group-hover:text-on-background transition-colors">Keep Session</span>
+</label>
+<a class="text-zinc-500 hover:text-primary transition-colors" href="#">Recovery</a>
+</div>
+<div class="space-y-4">
+<button class="w-full py-4 bg-primary text-on-primary font-headline font-bold text-xs uppercase tracking-[0.2em] hover:bg-black active:scale-[0.99] transition-all duration-300" type="submit">
+                            Authorize Access
+                        </button>
+<div class="relative py-2">
+<div class="absolute inset-0 flex items-center"><div class="w-full border-t border-zinc-100"></div></div>
+<div class="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-bold"><span class="bg-white px-4 text-zinc-300">OR</span></div>
+</div>
+<button class="w-full py-4 bg-zinc-100 text-zinc-900 font-headline font-bold text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-3 border border-zinc-200" type="button">
+<span class="material-symbols-outlined !text-[18px]">account_balance</span>
+                            SSO Authentication
+                        </button>
+</div>
+</form>
+<div class="mt-12 text-center">
+<p class="font-body text-xs text-zinc-500 font-medium">
+                        New academic? <a class="text-primary font-bold hover:underline underline-offset-4" href="#">Request Credentials</a>
+</p>
+</div>
+</div>
+</section>
+<!-- Decorative Institutional Quote -->
+<div class="absolute bottom-12 left-12 hidden lg:block max-w-sm border-l-4 border-primary pl-8">
+<p class="font-headline text-white/80 font-light text-xl leading-relaxed">
+                "La educación como práctica de la libertad, la equidad y la excelencia académica."
+            </p>
+<p class="font-label text-[10px] uppercase tracking-[0.2em] text-white/50 mt-6 font-bold">UNA — Rectoría de Identidad</p>
+</div>
+</main>
+<!-- Footer Component -->
+<footer class="bg-zinc-100 w-full mt-auto border-t border-zinc-200 py-12 px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-col md:flex-row items-center gap-8">
+<span class="font-['Manrope'] font-bold text-zinc-900 uppercase text-xs tracking-tighter">UNA Spaces</span>
+<span class="font-['Public_Sans'] text-xs tracking-wide text-zinc-500">© 2024 Universidad Nacional de Costa Rica. Academic Monolith System.</span>
+</div>
+<nav class="flex flex-wrap justify-center gap-8 font-['Public_Sans'] text-xs uppercase tracking-widest font-bold">
+<a class="text-zinc-500 hover:text-primary transition-opacity" href="#">Privacy Policy</a>
+<a class="text-zinc-500 hover:text-primary transition-opacity" href="#">Terms of Service</a>
+<a class="text-zinc-500 hover:text-primary transition-opacity" href="#">Campus Map</a>
+<a class="text-zinc-500 hover:text-primary transition-opacity" href="#">Contact</a>
+</nav>
+</footer>
+</body></html>
