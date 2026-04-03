@@ -48,15 +48,13 @@ h1 { font-family: 'Newsreader', serif; }
 <p class="text-gray-600 mt-2">Identificación Institucional</p>
 </div>
 
-<!-- 🔥 FORM ORIGINAL -->
 <form action="login" method="POST" class="space-y-6">
 
-<!-- ERROR -->
 <div id="errorBox" class="hidden bg-red-100 text-red-700 p-3 rounded text-sm text-center">
 Error en el login
 </div>
 
-<!-- EMAIL -->
+
 <div>
 <label class="text-xs font-bold uppercase tracking-widest text-gray-500">
 Correo institucional
@@ -73,12 +71,12 @@ type="email"
 placeholder="usuario@una.ac.cr"
 class="w-full pl-10 pr-4 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
 required
-autocomplete="email"  <!-- 🔥 mejora UX -->
+autocomplete="email"
 />
 </div>
 </div>
 
-<!-- PASSWORD -->
+
 <div>
 <label class="text-xs font-bold uppercase tracking-widest text-gray-500">
 Contraseña
@@ -95,12 +93,12 @@ type="password"
 placeholder="••••••••"
 class="w-full pl-10 pr-4 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
 required
-autocomplete="current-password" <!-- 🔥 mejora UX -->
+autocomplete="current-password"
 />
 </div>
 </div>
 
-<!-- BOTÓN -->
+
 <button 
 class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded shadow-md hover:shadow-lg transition-all uppercase tracking-widest text-sm"
 >
@@ -114,29 +112,30 @@ Ingresar
 
 </main>
 
-<!-- FOOTER -->
+    
 <footer class="w-full border-t p-6 text-center text-xs text-gray-500">
 © 2026 Universidad Nacional
 </footer>
 
-<!-- 🔥 VALIDACIONES -->
 <script>
 const params = new URLSearchParams(window.location.search);
+const errorBox = document.getElementById("errorBox");
+
+function mostrarError(msg){
+  errorBox.innerText = msg;
+  errorBox.classList.remove("hidden");
+}
 
 if (params.get("error") === "correo") {
-  document.getElementById("errorBox").innerText = "Solo correos @una.ac.cr ❌";
-  document.getElementById("errorBox").classList.remove("hidden");
+  mostrarError("Solo correos @una.ac.cr ❌");
 }
 
 if (params.get("error") === "login") {
-  document.getElementById("errorBox").innerText = "Usuario o contraseña incorrectos ❌";
-  document.getElementById("errorBox").classList.remove("hidden");
+  mostrarError("Usuario o contraseña incorrectos ❌");
 }
 
-// 🔥 NUEVO (manejo servidor caído)
 if (params.get("error") === "server") {
-  document.getElementById("errorBox").innerText = "Servidor no disponible ❌";
-  document.getElementById("errorBox").classList.remove("hidden");
+  mostrarError("Servidor no disponible ❌");
 }
 </script>
 

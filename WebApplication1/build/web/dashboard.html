@@ -82,11 +82,11 @@ body { font-family: 'Public Sans', sans-serif; }
 
 <input type="hidden" name="fecha" id="fecha">
 
-<!-- 🔥 NUEVO LABEL -->
+
 <label class="block text-sm font-bold mb-1">Hora inicio</label>
 <input type="time" name="hora_inicio" class="w-full border p-3 mb-3" required>
 
-<!-- 🔥 NUEVO LABEL -->
+
 <label class="block text-sm font-bold mb-1">Hora fin</label>
 <input type="time" name="hora_fin" class="w-full border p-3 mb-3" required>
 
@@ -107,12 +107,12 @@ body { font-family: 'Public Sans', sans-serif; }
 
 <script>
 
-// 🔥 usuario seguro
+
 fetch("usuarioActual")
 .then(r=>r.text())
 .then(u=>document.getElementById("usuario").innerText=u);
 
-// 🔥 MENSAJES
+
 const msg=new URLSearchParams(window.location.search).get("msg");
 const mensaje=document.getElementById("mensaje");
 
@@ -124,7 +124,7 @@ if(msg==="fecha")mensaje.innerHTML="<span class='text-red-600'>❌ Seleccione fe
 if(msg==="error")mensaje.innerHTML="<span class='text-red-600'>❌ Error</span>";
 if(msg==="server")mensaje.innerHTML="<span class='text-red-600'>❌ Servidor no disponible</span>";
 
-// VALIDAR
+
 function validarForm(){
 if(!fecha.value){
 errorFecha.classList.remove("hidden");
@@ -133,7 +133,7 @@ return false;
 return true;
 }
 
-// CALENDARIO
+
 let mes=new Date().getMonth(),anio=new Date().getFullYear();
 
 function generar(){

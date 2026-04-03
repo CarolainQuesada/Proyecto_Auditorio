@@ -8,7 +8,7 @@
 
 <body class="bg-gray-100">
 
-<!-- HEADER -->
+
 <header class="bg-red-800 text-white p-4 flex justify-between">
   <h1 class="font-bold text-xl">Panel Administrador</h1>
   <div>
@@ -26,17 +26,17 @@ class="bg-black text-white px-4 py-2 mb-4 rounded">
 Limpiar expiradas
 </button>
 
-<!-- MENSAJES -->
+
 <div id="mensaje" class="mb-4 font-bold"></div>
 
-<!-- TABLA -->
+
 <table class="w-full bg-white shadow text-center rounded overflow-hidden">
 <thead class="bg-gray-200">
 <tr>
 <th>ID</th>
 <th>Fecha</th>
-<th>Hora inicio</th> <!-- 🔥 mejor -->
-<th>Hora fin</th>    <!-- 🔥 mejor -->
+<th>Hora inicio</th> 
+<th>Hora fin</th>    
 <th>Cantidad</th>
 <th>Estado</th>
 <th>Acciones</th>
@@ -46,7 +46,7 @@ Limpiar expiradas
 <tbody id="tabla"></tbody>
 </table>
 
-<!-- FORM -->
+
 <h3 class="text-lg font-bold mt-6">Crear / Editar Reserva</h3>
 
 <form id="formReserva" action="reservar" method="POST"
@@ -58,15 +58,15 @@ class="bg-white p-4 rounded shadow mt-2">
 <input type="date" name="fecha" id="fechaInput"
 class="w-full border p-2 mb-2 rounded" required>
 
-<label class="font-bold">Hora inicio</label> <!-- 🔥 agregado -->
+<label class="font-bold">Hora inicio</label>
 <input type="time" name="hora_inicio" id="horaInicioInput"
 class="w-full border p-2 mb-2 rounded" required>
 
-<label class="font-bold">Hora fin</label> <!-- 🔥 agregado -->
+<label class="font-bold">Hora fin</label> 
 <input type="time" name="hora_fin" id="horaFinInput"
 class="w-full border p-2 mb-2 rounded" required>
 
-<label class="font-bold">Cantidad</label> <!-- 🔥 agregado -->
+<label class="font-bold">Cantidad</label> 
 <input type="number" name="cantidad" id="cantidadInput"
 class="w-full border p-2 mb-2 rounded" required>
 
@@ -87,7 +87,7 @@ Cancelar
 
 <script>
 
-// 🔐 VALIDAR ADMIN
+
 fetch("rol")
 .then(res => res.text())
 .then(rol => {
@@ -96,14 +96,14 @@ fetch("rol")
   }
 });
 
-// 👤 USUARIO
+
 fetch("usuarioActual")
 .then(res => res.text())
 .then(user => {
   document.getElementById("usuario").innerText = user;
 });
 
-// 🔥 MENSAJES
+
 const params = new URLSearchParams(window.location.search);
 const msg = params.get("msg");
 const mensaje = document.getElementById("mensaje");
@@ -118,7 +118,7 @@ if (msg === "error") mensaje.innerHTML = "<div class='text-red-600'>❌ Error</d
 if (msg === "server") mensaje.innerHTML = "<div class='text-red-600'>❌ Servidor no disponible</div>";
 
 
-// 🔥 TABLA
+
 function cargarReservas() {
 
   fetch("listarReservas")
@@ -167,7 +167,7 @@ function cargarReservas() {
   });
 }
 
-// 🎨 COLOR ESTADO
+
 function colorEstado(e) {
   if (e === "CONFIRMADA") return "text-green-600";
   if (e === "PENDIENTE") return "text-yellow-600";
@@ -175,7 +175,7 @@ function colorEstado(e) {
   return "";
 }
 
-// 🔥 EDITAR
+
 function editar(id, fecha, inicio, fin, cantidad) {
 
   document.getElementById("idReserva").value = id;
@@ -192,7 +192,7 @@ function editar(id, fecha, inicio, fin, cantidad) {
   document.getElementById("btnCancelar").classList.remove("hidden");
 }
 
-// 🔥 CANCELAR
+
 function cancelarEdicion() {
 
   document.getElementById("formReserva").reset();
@@ -204,7 +204,7 @@ function cancelarEdicion() {
   document.getElementById("btnCancelar").classList.add("hidden");
 }
 
-// 🔥 ELIMINAR
+
 function eliminar(id) {
   if (!confirm("¿Eliminar reserva?")) return;
 
