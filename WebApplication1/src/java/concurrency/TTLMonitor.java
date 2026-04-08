@@ -1,14 +1,14 @@
 package concurrency;
 
-import service.ReservaDAO;
-import socket.ServidorGUI;
+import service.ReservationDAO;
+import socket.ServerGUI;
 
 public class TTLMonitor extends Thread {
 
-    private ServidorGUI gui;
-    private static final int TTL_MINUTOS = 10;
+    private ServerGUI gui;
+    private static final int TTL_MINUTES = 10;
 
-    public TTLMonitor(ServidorGUI gui) {
+    public TTLMonitor(ServerGUI gui) {
         this.gui = gui;
     }
 
@@ -18,14 +18,14 @@ public class TTLMonitor extends Thread {
         while (true) {
             try {
 
-                gui.log("🕒 TTL ejecutándose...");
+                gui.log("TTL running...");
 
-                new ReservaDAO().limpiarExpiradas(TTL_MINUTOS);
+                new ReservationDAO().cleanExpired(TTL_MINUTES);
 
                 Thread.sleep(60000);
 
             } catch (Exception e) {
-                gui.log("❌ TTL error: " + e.getMessage());
+                gui.log("TTL error: " + e.getMessage());
             }
         }
     }

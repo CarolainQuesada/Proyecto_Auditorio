@@ -8,132 +8,143 @@
 
 <body class="bg-gray-100">
 
-
 <header class="bg-red-800 text-white p-4 flex justify-between">
   <h1 class="font-bold text-xl">Panel Administrador</h1>
   <div>
-    Admin: <span id="usuario"></span>
+    Admin: <span id="user"></span>
     <a href="logout" class="ml-4 bg-white text-red-800 px-3 py-1 rounded">Salir</a>
   </div>
 </header>
 
 <div class="p-6">
 
-<h2 class="text-xl font-bold mb-4">Reservas Registradas</h2>
+  <h2 class="text-xl font-bold mb-4">Reservas Registradas</h2>
 
-<button onclick="window.location.href='limpiarTTL'"
-class="bg-black text-white px-4 py-2 mb-4 rounded">
-Limpiar expiradas
-</button>
+  <button onclick="window.location.href='limpiarTTL'"
+  class="bg-black text-white px-4 py-2 mb-4 rounded">
+    Limpiar expiradas
+  </button>
 
+  <div id="mensaje" class="mb-4 font-bold"></div>
 
-<div id="mensaje" class="mb-4 font-bold"></div>
+  <table class="w-full bg-white shadow text-center rounded overflow-hidden">
+    <thead class="bg-gray-200">
+      <tr>
+        <th>ID</th>
+        <th>Fecha</th>
+        <th>Hora inicio</th>
+        <th>Hora fin</th>
+        <th>Cantidad</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tabla"></tbody>
+  </table>
 
+  <h3 class="text-lg font-bold mt-6">Crear / Editar Reserva</h3>
 
-<table class="w-full bg-white shadow text-center rounded overflow-hidden">
-<thead class="bg-gray-200">
-<tr>
-<th>ID</th>
-<th>Fecha</th>
-<th>Hora inicio</th> 
-<th>Hora fin</th>    
-<th>Cantidad</th>
-<th>Estado</th>
-<th>Acciones</th>
-</tr>
-</thead>
+  <form id="formReserva" action="reserve" method="POST"
+  class="bg-white p-4 rounded shadow mt-2" onsubmit="return validarAdminForm()">
 
-<tbody id="tabla"></tbody>
-</table>
+    <input type="hidden" id="idReserva" name="id">
 
+    <label class="font-bold">Fecha</label>
+    <input type="date" name="date" id="fechaInput"
+    class="w-full border p-2 mb-2 rounded" required>
 
-<h3 class="text-lg font-bold mt-6">Crear / Editar Reserva</h3>
+    <label class="font-bold">Hora inicio</label>
+    <input type="time" name="start_time" id="horaInicioInput"
+    class="w-full border p-2 mb-2 rounded" required>
 
-<form id="formReserva" action="reservar" method="POST"
-class="bg-white p-4 rounded shadow mt-2">
+    <label class="font-bold">Hora fin</label>
+    <input type="time" name="end_time" id="horaFinInput"
+    class="w-full border p-2 mb-2 rounded" required>
 
-<input type="hidden" id="idReserva" name="id">
+    <label class="font-bold">Cantidad</label>
+    <input type="number" name="quantity" id="cantidadInput"
+    class="w-full border p-2 mb-2 rounded" required>
 
-<label class="font-bold">Fecha</label>
-<input type="date" name="fecha" id="fechaInput"
-class="w-full border p-2 mb-2 rounded" required>
+    <button id="btnGuardar"
+    class="bg-red-700 text-white px-4 py-2 rounded">
+      Crear
+    </button>
 
-<label class="font-bold">Hora inicio</label>
-<input type="time" name="hora_inicio" id="horaInicioInput"
-class="w-full border p-2 mb-2 rounded" required>
+    <button type="button" onclick="cancelarEdicion()"
+    id="btnCancelar"
+    class="bg-gray-500 text-white px-4 py-2 rounded ml-2 hidden">
+      Cancelar
+    </button>
 
-<label class="font-bold">Hora fin</label> 
-<input type="time" name="hora_fin" id="horaFinInput"
-class="w-full border p-2 mb-2 rounded" required>
-
-<label class="font-bold">Cantidad</label> 
-<input type="number" name="cantidad" id="cantidadInput"
-class="w-full border p-2 mb-2 rounded" required>
-
-<button id="btnGuardar"
-class="bg-red-700 text-white px-4 py-2 rounded">
-Crear
-</button>
-
-<button type="button" onclick="cancelarEdicion()"
-id="btnCancelar"
-class="bg-gray-500 text-white px-4 py-2 rounded ml-2 hidden">
-Cancelar
-</button>
-
-</form>
+  </form>
 
 </div>
 
 <script>
-
-
-fetch("rol")
+fetch("role")
 .then(res => res.text())
-.then(rol => {
-  if (rol !== "ADMIN") {
+.then(role => {
+  if (role !== "ADMIN") {
     window.location.href = "index.html";
   }
 });
 
-
-fetch("usuarioActual")
+fetch("currentUser")
 .then(res => res.text())
 .then(user => {
-  document.getElementById("usuario").innerText = user;
+  document.getElementById("user").innerText = user;
 });
-
 
 const params = new URLSearchParams(window.location.search);
 const msg = params.get("msg");
 const mensaje = document.getElementById("mensaje");
 
 if (msg === "ok") mensaje.innerHTML = "<div class='text-green-600'>✔ Operación exitosa</div>";
-if (msg === "ocupado") mensaje.innerHTML = "<div class='text-red-600'>❌ Horario ocupado</div>";
-if (msg === "hora") mensaje.innerHTML = "<div class='text-red-600'>❌ Hora inválida</div>";
-if (msg === "cantidad") mensaje.innerHTML = "<div class='text-red-600'>❌ Cantidad inválida</div>";
+if (msg === "busy") mensaje.innerHTML = "<div class='text-red-600'>❌ Horario ocupado</div>";
+if (msg === "hour") mensaje.innerHTML = "<div class='text-red-600'>❌ Hora inválida</div>";
+if (msg === "quantity") mensaje.innerHTML = "<div class='text-red-600'>❌ Cantidad inválida</div>";
+if (msg === "past") mensaje.innerHTML = "<div class='text-red-600'>❌ No se permiten fechas pasadas</div>";
 if (msg === "ttl") mensaje.innerHTML = "<div class='text-blue-600'>🧹 TTL ejecutado</div>";
-if (msg === "confirmada") mensaje.innerHTML = "<div class='text-green-600'>✔ Confirmada</div>";
+if (msg === "confirmed") mensaje.innerHTML = "<div class='text-green-600'>✔ Confirmada</div>";
 if (msg === "error") mensaje.innerHTML = "<div class='text-red-600'>❌ Error</div>";
 if (msg === "server") mensaje.innerHTML = "<div class='text-red-600'>❌ Servidor no disponible</div>";
+if (msg === "unauthorized") mensaje.innerHTML = "<div class='text-red-600'>❌ No autorizado</div>";
 
+function validarAdminForm() {
+  const fechaInput = document.getElementById("fechaInput").value;
 
+  if (!fechaInput) {
+    return false;
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const fechaSeleccionada = new Date(fechaInput + "T00:00:00");
+
+  if (fechaSeleccionada < hoy) {
+    mensaje.innerHTML = "<div class='text-red-600'>❌ No se permiten fechas pasadas</div>";
+    return false;
+  }
+
+  return true;
+}
 
 function cargarReservas() {
-
-  fetch("listarReservas")
+  fetch("listReservations")
   .then(res => res.text())
   .then(data => {
-
     let html = "";
 
-    if(!data) return;
+    if (!data) {
+      document.getElementById("tabla").innerHTML = "";
+      return;
+    }
 
     let reservas = data.split("|");
 
     reservas.forEach(r => {
-
-      if(!r) return;
+      if (!r) return;
 
       let p = r.split(",");
 
@@ -146,18 +157,16 @@ function cargarReservas() {
         <td>${p[4]}</td>
         <td class="${colorEstado(p[5])} font-bold">${p[5]}</td>
         <td>
-
-          ${p[5] === "PENDIENTE" ? `
-          <button onclick="window.location.href='confirmarReserva?id=${p[0]}'"
+          ${p[5] === "PENDING" ? `
+          <button type="button" onclick="window.location.href='confirmReservation?id=${p[0]}'"
           class="bg-green-600 text-white px-2 rounded">✔</button>
 
-          <button onclick="editar(${p[0]}, '${p[1]}', '${p[2]}', '${p[3]}', ${p[4]})"
+          <button type="button" onclick="editar(${p[0]}, '${p[1]}', '${p[2]}', '${p[3]}', ${p[4]})"
           class="bg-yellow-500 text-white px-2 rounded">✎</button>
           ` : ""}
 
-          <button onclick="eliminar(${p[0]})"
+          <button type="button" onclick="eliminar(${p[0]})"
           class="bg-red-600 text-white px-2 rounded">X</button>
-
         </td>
       </tr>
       `;
@@ -167,24 +176,21 @@ function cargarReservas() {
   });
 }
 
-
 function colorEstado(e) {
-  if (e === "CONFIRMADA") return "text-green-600";
-  if (e === "PENDIENTE") return "text-yellow-600";
-  if (e === "EXPIRADA") return "text-gray-500";
+  if (e === "CONFIRMED") return "text-green-600";
+  if (e === "PENDING") return "text-yellow-600";
+  if (e === "EXPIRED") return "text-gray-500";
   return "";
 }
 
-
 function editar(id, fecha, inicio, fin, cantidad) {
-
   document.getElementById("idReserva").value = id;
   document.getElementById("fechaInput").value = fecha;
   document.getElementById("horaInicioInput").value = inicio;
   document.getElementById("horaFinInput").value = fin;
   document.getElementById("cantidadInput").value = cantidad;
 
-  document.getElementById("formReserva").action = "editarReserva";
+  document.getElementById("formReserva").action = "editReservation";
 
   document.getElementById("btnGuardar").innerText = "Actualizar";
   document.getElementById("btnGuardar").classList.replace("bg-red-700", "bg-green-600");
@@ -192,11 +198,10 @@ function editar(id, fecha, inicio, fin, cantidad) {
   document.getElementById("btnCancelar").classList.remove("hidden");
 }
 
-
 function cancelarEdicion() {
-
   document.getElementById("formReserva").reset();
-  document.getElementById("formReserva").action = "reservar";
+  document.getElementById("idReserva").value = "";
+  document.getElementById("formReserva").action = "reserve";
 
   document.getElementById("btnGuardar").innerText = "Crear";
   document.getElementById("btnGuardar").classList.replace("bg-green-600", "bg-red-700");
@@ -204,16 +209,14 @@ function cancelarEdicion() {
   document.getElementById("btnCancelar").classList.add("hidden");
 }
 
-
 function eliminar(id) {
   if (!confirm("¿Eliminar reserva?")) return;
 
-  fetch("eliminarReserva?id=" + id)
+  fetch("deleteReservation?id=" + id)
   .then(() => cargarReservas());
 }
 
 window.onload = cargarReservas;
-
 </script>
 
 </body>

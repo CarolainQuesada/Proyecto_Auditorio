@@ -3,8 +3,32 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/Ashly/Documents/Sistemas.O/Proyecto_Auditorio-develop/WebApplication1/web/index.html</file>
-            <file>file:/C:/Users/Ashly/Documents/Sistemas.O/Proyecto_Auditorio-develop/WebApplication1/nbproject/build-impl.xml</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/EliminarReservaServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/ReservaServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/ConfirmarReservaServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/service/BitacoraDAO.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/util/DBConnection.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/web/dashboard.html</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/web/admin.html</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/model/Reserva.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/model/ReservaEquipamiento.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/concurrency/CapacidadControl.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/model/Equipamiento.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/socket/FlujoCliente.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/service/ReservaDAO.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/concurrency/Calendario.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/RolServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/service/EquipamientoDAO.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/UsuarioActualServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/socket/ServidorGUI.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/ListarReservasServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/LoginServlet.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/model/Bitacora.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/service/ReservaEquipamientoDAO.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/web/index.html</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/concurrency/TTLMonitor.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/service/ReservaService.java</file>
+            <file>file:/C:/Users/Ashly/Documents/Sistemas_Operativos/Proyecto_Auditorio/WebApplication1/src/java/Controller/LogoutServlet.java</file>
         </group>
     </open-files>
 </project-private>
