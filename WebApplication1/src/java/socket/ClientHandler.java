@@ -1,118 +1,176 @@
 package socket;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.net.Socket;
 import service.ReservationService;
-import service.UserService;
+import java.io.*;
+import java.net.Socket;
 
+/**
+ * Handler por cada cliente conectado.
+ * Extiende Thread (requisito Fase II - hilos reales).
+ */
 public class ClientHandler extends Thread {
+    
+    private final Socket clientSocket;
+    private final ReservationService reservationService;
 
-    private final Socket socket;
-    private String user;
-    private final ServerGUI gui;
-
-    public ClientHandler(Socket socket, ServerGUI gui) {
-        this.socket = socket;
-        this.gui = gui;
-    }
-
-    public String getUser() {
-        return user;
+    /**
+     * Constructor del handler
+     */
+    public ClientHandler(Socket socket, ReservationService service) {
+        this.clientSocket = socket;
+        this.reservationService = service;
     }
 
     @Override
     public void run() {
-        try (
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream())
-        ) {
-            String message = in.readUTF();
-            String[] p = message.split(";");
-
-            ReservationService reservationService = new ReservationService();
-            UserService userService = new UserService();
-
-            String response = "ERROR";
-
-            if (p.length > 0) {
-                switch (p[0]) {
-
-                    case "LOGIN":
-                        if (p.length >= 3) {
-                            response = userService.loginOrRegisterUser(p[1], p[2]);
-                            gui.log("Login attempt: " + p[1] + " -> " + response);
-                        }
-                        break;
-
-                    case "RESERVE":
-                        if (p.length >= 6) {
-                            user = p[1];
-
-                            gui.log("Client connected: " + user);
-                            gui.log("Reservation: " + user + " | " + p[2] + " | " + p[3] + " - " + p[4]);
-
-                            response = reservationService.createReservation(
-                                    p[1],
-                                    p[2],
-                                    p[3],
-                                    p[4],
-                                    Integer.parseInt(p[5])
-                            );
-                        }
-                        break;
-
-                    case "EDIT":
-                        if (p.length >= 6) {
-                            response = reservationService.editReservation(
-                                    Integer.parseInt(p[1]),
-                                    p[2],
-                                    p[3],
-                                    p[4],
-                                    Integer.parseInt(p[5])
-                            );
-                        }
-                        break;
-
-                    case "CONFIRM":
-                        if (p.length >= 2) {
-                            response = reservationService.confirmReservation(Integer.parseInt(p[1]));
-                        }
-                        break;
-
-                    case "DELETE":
-                        if (p.length >= 2) {
-                            response = reservationService.deleteReservation(Integer.parseInt(p[1]));
-                        }
-                        break;
-
-                    case "LIST":
-                        response = reservationService.listReservations();
-                        break;
-
-                    default:
-                        gui.log("Unknown command: " + message);
-                        response = "ERROR";
-                        break;
-                }
+        String clientInfo = clientSocket.getInetAddress().getHostAddress();
+        System.out.println("[SERVER] Cliente conectado: " + clientInfo);
+        
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+            
+            String command = in.readLine();
+            
+            if (command == null || command.isEmpty()) {
+                out.println("ERROR: Comando vacío");
+                return;
             }
-
-            out.writeUTF(response);
-            out.flush();
-
-        } catch (Exception e) {
-            gui.log("Error: " + e.getMessage());
-            e.printStackTrace();
+            
+            System.out.println("[SERVER] Comando recibido: " + command);
+            
+            String[] parts = command.split(";");
+            String action = parts[0].toUpperCase();
+            
+            switch (action) {
+                case "RESERVAR":
+                    handleReserve(parts, out);
+                    break;
+                    
+                case "EDITAR":
+                    handleEdit(parts, out);
+                    break;
+                    
+                case "CONFIRMAR":
+                    handleConfirm(parts, out);
+                    break;
+                    
+                case "ELIMINAR":
+                    handleDelete(parts, out);
+                    break;
+                    
+                case "LISTAR":
+                    handleList(out);
+                    break;
+                    
+                default:
+                    out.println("ERROR: Comando no reconocido");
+            }
+            
+        } catch (IOException e) {
+            System.err.println("[SERVER] Error con cliente " + clientInfo + ": " + e.getMessage());
         } finally {
             try {
-                socket.close();
-            } catch (Exception e) {
-                gui.log("Error closing socket: " + e.getMessage());
-            }
+                clientSocket.close();
+                System.out.println("[SERVER] Cliente desconectado: " + clientInfo);
+            } catch (IOException ignored) {}
+        }
+    }
 
-            if (user != null) {
-                gui.log("Client disconnected: " + user);
+    /**
+     * Maneja comando RESERVAR
+     * Formato: RESERVAR;usuario;fecha;horaInicio;horaFin;cantidad;equipoType;equipoQty
+     */
+    private void handleReserve(String[] parts, PrintWriter out) {
+        try {
+            if (parts.length < 8) {
+                out.println("ERROR: Parámetros insuficientes");
+                return;
             }
+            
+            String usuario = parts[1];
+            String fecha = parts[2];
+            String horaInicio = parts[3];
+            String horaFin = parts[4];
+            int cantidad = Integer.parseInt(parts[5]);
+            String equipoType = parts[6];
+            int equipoQty = Integer.parseInt(parts[7]);
+
+            String resultado = reservationService.createReservation(
+                usuario, fecha, horaInicio, horaFin, cantidad, equipoType, equipoQty
+            );
+            
+            out.println(resultado);
+            System.out.println("[SERVER] Resultado reserva: " + resultado);
+            
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Maneja comando EDITAR
+     * Formato: EDITAR;id;fecha;horaInicio;horaFin;cantidad
+     */
+    private void handleEdit(String[] parts, PrintWriter out) {
+        try {
+            if (parts.length < 6) {
+                out.println("ERROR: Parámetros insuficientes");
+                return;
+            }
+            
+            int id = Integer.parseInt(parts[1]);
+            String fecha = parts[2];
+            String horaInicio = parts[3];
+            String horaFin = parts[4];
+            int cantidad = Integer.parseInt(parts[5]);
+
+            String resultado = reservationService.editReservation(id, fecha, horaInicio, horaFin, cantidad);
+            out.println(resultado);
+            
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Maneja comando CONFIRMAR
+     * Formato: CONFIRMAR;id
+     */
+    private void handleConfirm(String[] parts, PrintWriter out) {
+        try {
+            int id = Integer.parseInt(parts[1]);
+            String resultado = reservationService.confirmReservation(id);
+            out.println(resultado);
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Maneja comando ELIMINAR
+     * Formato: ELIMINAR;id
+     */
+    private void handleDelete(String[] parts, PrintWriter out) {
+        try {
+            int id = Integer.parseInt(parts[1]);
+            String resultado = reservationService.deleteReservation(id);
+            out.println(resultado);
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Maneja comando LISTAR
+     * Formato: LISTAR
+     */
+    private void handleList(PrintWriter out) {
+        try {
+            String resultado = reservationService.listReservations();
+            out.println(resultado);
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
         }
     }
 }

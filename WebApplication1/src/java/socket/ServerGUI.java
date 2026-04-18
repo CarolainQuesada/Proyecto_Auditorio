@@ -7,16 +7,19 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import concurrency.TTLMonitor;
+import service.ReservationService;
 
 public class ServerGUI extends JFrame {
 
     private JTextArea logArea;
     private ServerSocket server;
     private boolean running = false;
-
+    private final ReservationService reservationService;
     private static final List<String> clients = new ArrayList<>();
 
     public ServerGUI() {
+        
+        this.reservationService = new ReservationService();
         setTitle("Reservation Server");
         setSize(500, 400);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -63,7 +66,7 @@ public class ServerGUI extends JFrame {
                     try {
                         Socket client = server.accept();
                         log("New incoming connection");
-                        new ClientHandler(client, this).start();
+                        new ClientHandler(client, reservationService).start();
                     } catch (Exception e) {
                         if (running) {
                             log("Connection error: " + e.getMessage());

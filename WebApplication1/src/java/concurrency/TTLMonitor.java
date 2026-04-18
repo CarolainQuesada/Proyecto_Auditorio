@@ -1,6 +1,6 @@
 package concurrency;
 
-import service.ReservationDAO;
+import dao.ReservationDAO;
 import socket.ServerGUI;
 
 public class TTLMonitor extends Thread {

@@ -5,9 +5,9 @@ import java.sql.DriverManager;
 
 public class DBConnection {
 
-    private static final String URL = "..";
-    private static final String USER = "..";
-    private static final String PASSWORD = "..";
+    private static final String URL = "jdbc:mysql://mysql-11b2f5ad-db-so.g.aivencloud.com:28915/auditorio?sslMode=REQUIRED";
+    private static final String USER = "avadmin";
+    private static final String PASSWORD = "joss456";
 
     public static Connection getConnection() {
         try {
