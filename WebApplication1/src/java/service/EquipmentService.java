@@ -4,26 +4,16 @@ import concurrency.EquipmentControl;
 import dao.EquipmentDAO;
 import java.util.Map;
 
-/**
- * Servicio de equipamiento - Coordina semáforos + BD
- * SIN parámetro Connection en constructor (compatible con ReservationService)
- */
 public class EquipmentService {
     
     private final EquipmentControl control;
     private final EquipmentDAO dao;
 
-    /**
-     * Constructor SIN parámetros - compatible con ReservationService
-     */
     public EquipmentService() {
         this.control = new EquipmentControl();
-        this.dao = new EquipmentDAO(); // DAO maneja conexión internamente
+        this.dao = new EquipmentDAO(); 
     }
 
-    /**
-     * Reserva equipamiento para una reserva
-     */
     public boolean reserveEquipment(String equipmentType, int quantity, String reservationId) {
         if ("NINGUNO".equalsIgnoreCase(equipmentType) || quantity == 0) {
             return true;
@@ -32,7 +22,6 @@ public class EquipmentService {
         boolean success = control.acquire(equipmentType, quantity);
         
         if (success) {
-            // Actualizar BD
             int equipmentId = getEquipmentId(equipmentType);
             if (equipmentId > 0) {
                 int newAvailable = control.availablePermits(equipmentType);
@@ -44,9 +33,6 @@ public class EquipmentService {
         return success;
     }
 
-    /**
-     * Libera equipamiento
-     */
     public void releaseEquipment(String equipmentType, int quantity, String reservationId) {
         if ("NINGUNO".equalsIgnoreCase(equipmentType) || quantity == 0) {
             return;
@@ -54,7 +40,6 @@ public class EquipmentService {
 
         control.release(equipmentType, quantity);
         
-        // Actualizar BD
         int equipmentId = getEquipmentId(equipmentType);
         if (equipmentId > 0) {
             int newAvailable = control.availablePermits(equipmentType);
@@ -64,9 +49,6 @@ public class EquipmentService {
         System.out.println("[EQUIPMENT] Liberado: " + equipmentType + " x" + quantity);
     }
 
-    /**
-     * Reserva múltiple con prevención de deadlocks
-     */
     public boolean reserveMultiple(Map<String, Integer> requirements, String reservationId) {
         boolean success = control.acquireMultiple(requirements);
         
@@ -83,9 +65,6 @@ public class EquipmentService {
         return success;
     }
 
-    /**
-     * Libera múltiples equipos
-     */
     public void releaseMultiple(Map<String, Integer> requirements, String reservationId) {
         control.releaseMultiple(requirements);
         

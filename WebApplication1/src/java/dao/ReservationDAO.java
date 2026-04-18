@@ -9,9 +9,6 @@ import java.util.List;
 
 public class ReservationDAO {
 
-    /**
-     * Crea una reserva. Retorna true si se insertó correctamente.
-     */
     public boolean create(String user, String date, String start, String end, int quantity) {
         String sql = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
         
@@ -34,9 +31,6 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Obtiene todas las reservas activas.
-     */
     public List<Reservation> getAll() {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT * FROM reservations WHERE status != 'EXPIRED' ORDER BY date, start_time";
@@ -56,9 +50,6 @@ public class ReservationDAO {
         return list;
     }
 
-    /**
-     * Obtiene reservas por fecha (excluye expiradas).
-     */
     public List<Reservation> getByDate(String date) {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT * FROM reservations WHERE date = ? AND status != 'EXPIRED'";
@@ -81,9 +72,6 @@ public class ReservationDAO {
         return list;
     }
 
-    /**
-     * Obtiene reserva por ID.
-     */
     public Reservation getById(int id) {
         String sql = "SELECT * FROM reservations WHERE id = ?";
         
@@ -105,16 +93,10 @@ public class ReservationDAO {
         return null;
     }
 
-    /**
-     * Confirma una reserva pendiente.
-     */
     public boolean confirm(int id) {
         return updateStatus(id, "CONFIRMED");
     }
 
-    /**
-     * Actualiza una reserva completa.
-     */
     public boolean update(Reservation reservation) {
         String sql = "UPDATE reservations SET date=?, start_time=?, end_time=?, quantity=? WHERE id=?";
         
@@ -136,9 +118,6 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Actualiza estado de una reserva.
-     */
     public boolean updateStatus(int id, String status) {
         String sql = "UPDATE reservations SET status = ? WHERE id = ?";
         
@@ -157,9 +136,6 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Elimina una reserva.
-     */
     public boolean delete(int id) {
         String sql = "DELETE FROM reservations WHERE id = ?";
         
@@ -177,10 +153,6 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Verifica si existe solapamiento de horario para una fecha.
-     * Usa FOR UPDATE para locking pesimista (opcional, según tu motor BD).
-     */
     public boolean existsOverlap(String date, String start, String end) {
         String sql = "SELECT COUNT(*) FROM reservations " +
                      "WHERE date = ? AND status != 'EXPIRED' " +
@@ -203,12 +175,9 @@ public class ReservationDAO {
             System.err.println("[DAO ERROR] existsOverlap: " + e.getMessage());
         }
         
-        return false; // Asume que no hay conflicto si hay error
+        return false; 
     }
 
-    /**
-     * Marca reservas pendientes como EXPIRADAS según TTL.
-     */
     public int cleanExpired(int ttlMinutes) {
         String sql = "UPDATE reservations " +
                      "SET status = 'EXPIRED' " +
@@ -230,16 +199,10 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Versión por defecto: 10 minutos TTL.
-     */
     public int cleanExpired() {
         return cleanExpired(10);
     }
 
-    /**
-     * Mapea ResultSet a objeto Reservation.
-     */
     private Reservation mapReservation(ResultSet rs) throws SQLException {
         Reservation r = new Reservation();
         r.setId(rs.getInt("id"));

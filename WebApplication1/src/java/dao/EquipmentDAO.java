@@ -5,9 +5,6 @@ import java.sql.*;
 
 public class EquipmentDAO {
 
-    /**
-     * Obtiene ID de equipo por nombre
-     */
     public int getEquipmentIdByName(String name) {
         String sql = "SELECT id FROM equipamiento WHERE nombre = ?";
         
@@ -28,9 +25,6 @@ public class EquipmentDAO {
         return -1;
     }
 
-    /**
-     * Actualiza cantidad disponible
-     */
     public boolean updateAvailability(int equipmentId, int newQuantity) {
         String sql = "UPDATE equipamiento SET cantidad_disponible = ? WHERE id = ?";
         
@@ -49,9 +43,6 @@ public class EquipmentDAO {
         }
     }
 
-    /**
-     * Inserta relación reserva-equipamiento
-     */
     public boolean insertReservationEquipment(int reservationId, int equipmentId, int quantity) {
         String sql = "INSERT INTO reserva_equipamiento (id_reserva, id_equipamiento, cantidad) VALUES (?, ?, ?)";
         

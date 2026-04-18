@@ -4,18 +4,11 @@ import service.ReservationService;
 import java.io.*;
 import java.net.Socket;
 
-/**
- * Handler por cada cliente conectado.
- * Extiende Thread (requisito Fase II - hilos reales).
- */
 public class ClientHandler extends Thread {
     
     private final Socket clientSocket;
     private final ReservationService reservationService;
 
-    /**
-     * Constructor del handler
-     */
     public ClientHandler(Socket socket, ReservationService service) {
         this.clientSocket = socket;
         this.reservationService = service;
@@ -76,10 +69,6 @@ public class ClientHandler extends Thread {
         }
     }
 
-    /**
-     * Maneja comando RESERVAR
-     * Formato: RESERVAR;usuario;fecha;horaInicio;horaFin;cantidad;equipoType;equipoQty
-     */
     private void handleReserve(String[] parts, PrintWriter out) {
         try {
             if (parts.length < 8) {
@@ -108,10 +97,6 @@ public class ClientHandler extends Thread {
         }
     }
 
-    /**
-     * Maneja comando EDITAR
-     * Formato: EDITAR;id;fecha;horaInicio;horaFin;cantidad
-     */
     private void handleEdit(String[] parts, PrintWriter out) {
         try {
             if (parts.length < 6) {
@@ -133,10 +118,6 @@ public class ClientHandler extends Thread {
         }
     }
 
-    /**
-     * Maneja comando CONFIRMAR
-     * Formato: CONFIRMAR;id
-     */
     private void handleConfirm(String[] parts, PrintWriter out) {
         try {
             int id = Integer.parseInt(parts[1]);
@@ -147,10 +128,6 @@ public class ClientHandler extends Thread {
         }
     }
 
-    /**
-     * Maneja comando ELIMINAR
-     * Formato: ELIMINAR;id
-     */
     private void handleDelete(String[] parts, PrintWriter out) {
         try {
             int id = Integer.parseInt(parts[1]);
@@ -161,10 +138,6 @@ public class ClientHandler extends Thread {
         }
     }
 
-    /**
-     * Maneja comando LISTAR
-     * Formato: LISTAR
-     */
     private void handleList(PrintWriter out) {
         try {
             String resultado = reservationService.listReservations();
