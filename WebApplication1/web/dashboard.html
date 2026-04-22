@@ -5,40 +5,18 @@
 <title>Gestión de Espacios - UNA</title>
 
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-
 <link href="https://fonts.googleapis.com/css2?family=Newsreader&family=Public+Sans&display=swap" rel="stylesheet"/>
 
 <style>
 body { font-family: 'Public Sans', sans-serif; }
 .font-headline { font-family: 'Newsreader', serif; }
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7,1fr);
-  gap: 6px;
-}
-
-.dia {
-  padding: 12px;
-  border-radius: 6px;
-  text-align: center;
-  cursor: pointer;
-  background: #f6f3f2;
-}
-
+.calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+.dia { padding: 12px; border-radius: 6px; text-align: center; cursor: pointer; background: #f6f3f2; }
 .dia:hover { background: #eae7e7; }
-
-.selected-day {
-  background: #9e0000 !important;
-  color: white;
-}
-
-.past-day {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+.selected-day { background: #9e0000 !important; color: white; }
+.past-day { opacity: 0.4; cursor: not-allowed; }
+.loading { opacity: 0.7; pointer-events: none; }
 </style>
-
 </head>
 
 <body class="bg-[#fcf9f8] flex">
@@ -57,53 +35,70 @@ body { font-family: 'Public Sans', sans-serif; }
 
   <div class="flex justify-between mb-8">
     <h1 class="text-3xl font-headline text-red-700">Universidad Nacional</h1>
-    <span id="usuario"></span>
+    <span id="usuario" class="text-gray-600"></span>
   </div>
 
-  <div id="mensaje" class="mb-6 font-bold"></div>
+  <div id="mensaje" class="mb-6 font-bold min-h-[24px]"></div>
 
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
     <div class="lg:col-span-8 bg-white p-6 rounded-xl shadow">
-
       <div class="flex justify-between mb-4">
-        <button type="button" onclick="cambiarMes(-1)">⬅</button>
-        <h2 id="mesActual"></h2>
-        <button type="button" onclick="cambiarMes(1)">➡</button>
+        <button type="button" onclick="cambiarMes(-1)" class="text-red-700 hover:text-red-900">⬅</button>
+        <h2 id="mesActual" class="font-headline text-xl"></h2>
+        <button type="button" onclick="cambiarMes(1)" class="text-red-700 hover:text-red-900">➡</button>
       </div>
 
-      <div class="calendar-grid font-bold mb-2 text-center">
+      <div class="calendar-grid font-bold mb-2 text-center text-sm text-gray-600">
         <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div>
         <div>Jue</div><div>Vie</div><div>Sáb</div>
       </div>
-
       <div id="calendario" class="calendar-grid"></div>
-
     </div>
 
     <div class="lg:col-span-4 bg-white p-6 rounded-xl shadow">
-
-      <form action="reserve" method="POST" onsubmit="return validarForm()">
-
+      <form id="reservaForm" action="ReservationServlet" method="POST" onsubmit="return validarYEnviar(event)">
+        
         <input type="hidden" name="date" id="fecha">
 
-        <label class="block text-sm font-bold mb-1">Hora inicio</label>
-        <input type="time" name="start_time" class="w-full border p-3 mb-3" required>
+        <label class="block text-sm font-bold mb-1 text-gray-700">Hora inicio</label>
+        <input type="time" name="start_time" id="start_time" class="w-full border p-3 mb-3 rounded" required>
 
-        <label class="block text-sm font-bold mb-1">Hora fin</label>
-        <input type="time" name="end_time" class="w-full border p-3 mb-3" required>
+        <label class="block text-sm font-bold mb-1 text-gray-700">Hora fin</label>
+        <input type="time" name="end_time" id="end_time" class="w-full border p-3 mb-3 rounded" required>
 
-        <label class="block text-sm font-bold mb-1">Cantidad</label>
-        <input type="number" name="quantity" class="w-full border p-3 mb-3" required>
+        <label class="block text-sm font-bold mb-1 text-gray-700">Cantidad de asistentes</label>
+        <input type="number" name="quantity" id="quantity" class="w-full border p-3 mb-3 rounded" required min="1" max="200">
 
-        <button class="w-full bg-red-700 text-white p-3">Reservar</button>
+        <label class="block text-sm font-bold mb-1 text-gray-700 mt-4">Equipamiento audiovisual</label>
+        <select name="equipment" id="equipment" class="w-full border p-3 mb-2 rounded">
+          <option value="NINGUNO">Ninguno</option>
+          <option value="PROYECTOR">Proyector (2 disponibles)</option>
+          <option value="MICROFONO">Micrófono (5 disponibles)</option>
+          <option value="SONIDO">Sistema de sonido (3 disponibles)</option>
+        </select>
+        <input type="number" name="eqQty" id="eqQty" class="w-full border p-3 mb-3 rounded" value="1" min="1" max="5">
 
-        <p id="errorFecha" class="text-red-600 hidden">Seleccione fecha</p>
+        <button type="submit" id="btnReservar" class="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 transition">
+          Reservar
+        </button>
+
+        <p id="errorFecha" class="text-red-600 text-sm mt-2 hidden">⚠️ Seleccione una fecha válida</p>
+        
+        <p id="loading" class="text-gray-500 text-sm mt-2 hidden">⏳ Procesando reserva...</p>
 
       </form>
-
     </div>
 
+  </div>
+
+  <div class="mt-8 p-4 bg-gray-100 rounded text-sm text-gray-600">
+    <strong>Estado del sistema:</strong>
+    <ul class="mt-2 space-y-1">
+      <li>• Capacidad auditorio: <span id="capacidad">200</span> personas máx.</li>
+      <li>• Equipamiento: Proyector(2), Micrófono(5), Sonido(3)</li>
+      <li>• TTL reserva temporal: 10 minutos</li>
+    </ul>
   </div>
 
 </main>
@@ -115,111 +110,135 @@ const fecha = document.getElementById("fecha");
 const errorFecha = document.getElementById("errorFecha");
 const calendario = document.getElementById("calendario");
 const mesActual = document.getElementById("mesActual");
+const btnReservar = document.getElementById("btnReservar");
+const loading = document.getElementById("loading");
 
-fetch("currentUser")
-.then(r => r.text())
-.then(u => usuarioSpan.innerText = u);
+fetch("CurrentUserServlet")
+  .then(r => r.text())
+  .then(u => {
+    if (u && u !== "NO_SESSION") {
+      usuarioSpan.innerText = "👤 " + u;
+    } else {
+      window.location.href = "index.html";
+    }
+  })
+  .catch(() => window.location.href = "index.html");
 
-fetch("role")
-.then(r => r.text())
-.then(role => {
-  if (role === "NO_SESSION") {
-    window.location.href = "index.html";
-  }
-});
+const params = new URLSearchParams(window.location.search);
+const msg = params.get("msg");
+const errorMsg = {
+  "ok": "✅ Reserva creada exitosamente",
+  "busy": "⚠️ Horario ya ocupado",
+  "busy_time": "⚠️ Conflicto de horario",
+  "busy_capacity": "⚠️ Capacidad máxima excedida",
+  "busy_equipment": "⚠️ Equipamiento no disponible",
+  "hour": "⚠️ Hora de inicio debe ser menor que hora fin",
+  "quantity": "⚠️ Cantidad debe ser mayor a 0",
+  "past": "⚠️ No se permiten fechas pasadas",
+  "error": "❌ Error interno del servidor",
+  "server": "❌ Servidor no disponible",
+  "unauthorized": "❌ Sesión no válida"
+};
 
-const msg = new URLSearchParams(window.location.search).get("msg");
+if (msg && errorMsg[msg]) {
+  mensaje.innerHTML = `<span class="${msg === 'ok' ? 'text-green-600' : 'text-red-600'}">${errorMsg[msg]}</span>`;
+  history.replaceState(null, null, window.location.pathname);
+}
 
-if (msg === "ok") mensaje.innerHTML = "<span class='text-green-600'>✔ Reserva creada</span>";
-if (msg === "busy") mensaje.innerHTML = "<span class='text-red-600'>❌ Horario ocupado</span>";
-if (msg === "hour") mensaje.innerHTML = "<span class='text-red-600'>❌ Hora inválida</span>";
-if (msg === "quantity") mensaje.innerHTML = "<span class='text-red-600'>❌ Cantidad inválida</span>";
-if (msg === "past") mensaje.innerHTML = "<span class='text-red-600'>❌ No se permiten fechas pasadas</span>";
-if (msg === "error") mensaje.innerHTML = "<span class='text-red-600'>❌ Error</span>";
-if (msg === "server") mensaje.innerHTML = "<span class='text-red-600'>❌ Servidor no disponible</span>";
-if (msg === "unauthorized") mensaje.innerHTML = "<span class='text-red-600'>❌ No autorizado</span>";
+function validarYEnviar(e) {
+  e.preventDefault(); 
 
-function validarForm() {
   if (!fecha.value) {
     errorFecha.classList.remove("hidden");
     return false;
   }
+  errorFecha.classList.add("hidden");
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-
   const fechaSeleccionada = new Date(fecha.value + "T00:00:00");
-
   if (fechaSeleccionada < hoy) {
     mensaje.innerHTML = "<span class='text-red-600'>❌ No se permiten fechas pasadas</span>";
     return false;
   }
 
+  const start = document.getElementById("start_time").value;
+  const end = document.getElementById("end_time").value;
+  if (start >= end) {
+    mensaje.innerHTML = "<span class='text-red-600'>❌ Hora de inicio debe ser menor que hora fin</span>";
+    return false;
+  }
+
+  // Validar cantidad
+  const qty = parseInt(document.getElementById("quantity").value);
+  if (qty <= 0 || qty > 200) {
+    mensaje.innerHTML = "<span class='text-red-600'>❌ Cantidad debe estar entre 1 y 200</span>";
+    return false;
+  }
+
+  btnReservar.disabled = true;
+  btnReservar.classList.add("loading");
+  loading.classList.remove("hidden");
+  mensaje.innerHTML = "";
+
+  document.getElementById("reservaForm").submit();
+  
   return true;
 }
 
 let mes = new Date().getMonth();
 let anio = new Date().getFullYear();
 
-function generar() {
+function generarCalendario() {
   calendario.innerHTML = "";
-  let first = new Date(anio, mes, 1).getDay();
-  let total = new Date(anio, mes + 1, 0).getDate();
+  const firstDay = new Date(anio, mes, 1).getDay();
+  const totalDays = new Date(anio, mes + 1, 0).getDate();
 
   mesActual.innerText = new Date(anio, mes).toLocaleDateString("es", {
-    month: "long",
-    year: "numeric"
+    month: "long", year: "numeric"
   });
 
-  for (let i = 0; i < first; i++) {
+  for (let i = 0; i < firstDay; i++) {
     calendario.innerHTML += "<div></div>";
   }
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-  for (let d = 1; d <= total; d++) {
+  for (let d = 1; d <= totalDays; d++) {
     const fechaDia = new Date(anio, mes, d);
     fechaDia.setHours(0, 0, 0, 0);
-
     const esPasada = fechaDia < hoy;
 
     calendario.innerHTML += `
-      <div class="dia ${esPasada ? 'past-day' : ''}" data-past="${esPasada}">
+      <div class="dia ${esPasada ? 'past-day' : ''}" 
+           data-past="${esPasada}" 
+           data-date="${anio}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}">
         ${d}
       </div>`;
   }
-
   document.querySelectorAll(".dia").forEach(d => {
     d.onclick = () => {
       if (d.dataset.past === "true") {
         mensaje.innerHTML = "<span class='text-red-600'>❌ No se permiten fechas pasadas</span>";
         return;
       }
-
       document.querySelectorAll(".dia").forEach(x => x.classList.remove("selected-day"));
       d.classList.add("selected-day");
-
-      fecha.value = anio + "-" + String(mes + 1).padStart(2, "0") + "-" + String(d.innerText).padStart(2, "0");
+      fecha.value = d.dataset.date;
       errorFecha.classList.add("hidden");
     };
   });
 }
 
-function cambiarMes(v) {
-  mes += v;
-  if (mes < 0) {
-    mes = 11;
-    anio--;
-  }
-  if (mes > 11) {
-    mes = 0;
-    anio++;
-  }
-  generar();
+function cambiarMes(delta) {
+  mes += delta;
+  if (mes < 0) { mes = 11; anio--; }
+  if (mes > 11) { mes = 0; anio++; }
+  generarCalendario();
 }
 
-generar();
+generarCalendario();
 </script>
 
 </body>

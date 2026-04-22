@@ -4,28 +4,24 @@ import java.util.concurrent.Semaphore;
 
 public class CapacityControl {
 
-    private static final int MAX_CAPACITY = 100;
+    private static final int MAX_CAPACITY = 200;
+    
     private static final Semaphore semaphore = new Semaphore(MAX_CAPACITY, true);
-
-    public static boolean acquire(int quantity) {
-
-        if (quantity <= 0) {
+    
+    public static boolean acquire(int permits) {
+        if (permits <= 0 || permits > MAX_CAPACITY) {
             return false;
         }
-
-        return semaphore.tryAcquire(quantity);
+        return semaphore.tryAcquire(permits);
     }
 
-    public static void release(int quantity) {
-
-        if (quantity <= 0) {
-            return;
+    public static void release(int permits) {
+        if (permits > 0) {
+            semaphore.release(permits);
         }
-
-        semaphore.release(quantity);
     }
 
-    public static int available() {
+    public static int availablePermits() {
         return semaphore.availablePermits();
     }
 }

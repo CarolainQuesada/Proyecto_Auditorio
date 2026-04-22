@@ -1,1 +1,4 @@
-/WebApplication1/dist/
+*.class
+build/
+dist/
+WebApplication1/build/

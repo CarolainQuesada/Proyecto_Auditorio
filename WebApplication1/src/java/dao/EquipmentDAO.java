@@ -6,7 +6,7 @@ import java.sql.*;
 public class EquipmentDAO {
 
     public int getEquipmentIdByName(String name) {
-        String sql = "SELECT id FROM equipamiento WHERE nombre = ?";
+        String sql = "SELECT id FROM equipment WHERE name = ?";
         
         try (Connection con = DBConnection.getConnection();
              PreparedStatement stmt = con.prepareStatement(sql)) {
@@ -26,7 +26,7 @@ public class EquipmentDAO {
     }
 
     public boolean updateAvailability(int equipmentId, int newQuantity) {
-        String sql = "UPDATE equipamiento SET cantidad_disponible = ? WHERE id = ?";
+        String sql = "UPDATE equipment SET available_quantity = ? WHERE id = ?";
         
         try (Connection con = DBConnection.getConnection();
              PreparedStatement stmt = con.prepareStatement(sql)) {
@@ -44,7 +44,7 @@ public class EquipmentDAO {
     }
 
     public boolean insertReservationEquipment(int reservationId, int equipmentId, int quantity) {
-        String sql = "INSERT INTO reserva_equipamiento (id_reserva, id_equipamiento, cantidad) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO reservation_equipment (reservation_id, equipment_id, quantity) VALUES (?, ?, ?)";
         
         try (Connection con = DBConnection.getConnection();
              PreparedStatement stmt = con.prepareStatement(sql)) {

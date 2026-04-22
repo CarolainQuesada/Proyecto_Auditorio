@@ -6,7 +6,7 @@ import socket.ServerGUI;
 public class TTLMonitor extends Thread {
 
     private ServerGUI gui;
-    private static final int TTL_MINUTES = 10;
+    private static final int TTL_MINUTES = 1;
 
     public TTLMonitor(ServerGUI gui) {
         this.gui = gui;

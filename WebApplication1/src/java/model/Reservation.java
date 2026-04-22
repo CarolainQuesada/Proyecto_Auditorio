@@ -74,4 +74,8 @@ public class Reservation {
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
+
+    public Object getEquipmentType() {
+        throw new UnsupportedOperationException("Not supported yet."); 
+    }
 }

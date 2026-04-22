@@ -1,5 +1,6 @@
 package socket;
 
+import concurrency.CapacityControl;
 import javax.swing.*;
 import java.awt.*;
 import java.net.ServerSocket;
@@ -18,6 +19,7 @@ public class ServerGUI extends JFrame {
     private static final List<String> clients = new ArrayList<>();
 
     public ServerGUI() {
+        System.out.println("📊 Capacidad inicial: " + CapacityControl.availablePermits() + " / 200");
         
         this.reservationService = new ReservationService();
         setTitle("Reservation Server");
