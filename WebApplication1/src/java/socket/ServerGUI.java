@@ -1,18 +1,19 @@
 package socket;
 
 import concurrency.CapacityControl;
+import concurrency.TTLMonitor;
+import service.ReservationService;
+
 import javax.swing.*;
 import java.awt.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import concurrency.TTLMonitor;
-import service.ReservationService;
 
 public class ServerGUI extends JFrame {
 
-    private JTextArea logArea;
+    private final JTextArea logArea;
     private ServerSocket server;
     private boolean running = false;
     private final ReservationService reservationService;
@@ -20,7 +21,7 @@ public class ServerGUI extends JFrame {
 
     public ServerGUI() {
         System.out.println("📊 Capacidad inicial: " + CapacityControl.availablePermits() + " / 200");
-        
+
         this.reservationService = new ReservationService();
         setTitle("Reservation Server");
         setSize(500, 400);
@@ -67,8 +68,11 @@ public class ServerGUI extends JFrame {
                 while (running) {
                     try {
                         Socket client = server.accept();
-                        log("New incoming connection");
-                        new ClientHandler(client, reservationService).start();
+                        String ip = client.getInetAddress().getHostAddress();
+                        log("New incoming connection from: " + ip);
+
+                        new ClientHandler(client, reservationService, this).start();
+
                     } catch (Exception e) {
                         if (running) {
                             log("Connection error: " + e.getMessage());
@@ -100,7 +104,9 @@ public class ServerGUI extends JFrame {
     }
 
     public synchronized void addClient(String user) {
-        clients.add(user);
+        if (!clients.contains(user)) {
+            clients.add(user);
+        }
         log("Client connected: " + user);
     }
 

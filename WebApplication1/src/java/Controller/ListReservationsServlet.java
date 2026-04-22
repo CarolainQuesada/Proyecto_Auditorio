@@ -1,33 +1,41 @@
 package Controller;
 
-import java.io.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import javax.servlet.annotation.WebServlet;
-import java.net.*;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 @WebServlet("/listReservations")
 public class ListReservationsServlet extends HttpServlet {
 
+    @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
 
-        try {
+        resp.setContentType("text/plain;charset=UTF-8");
+
+        try (
             Socket socket = new Socket("localhost", 5000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(
+                    new InputStreamReader(socket.getInputStream()))
+        ) {
+            out.println("LIST");
+            String responseServer = in.readLine();
 
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream in = new DataInputStream(socket.getInputStream());
+            if (responseServer == null) {
+                responseServer = "";
+            }
 
-            out.writeUTF("LIST");
-
-            String responseServer = in.readUTF();
-
-            socket.close();
-
-            resp.setContentType("text/plain");
             resp.getWriter().write(responseServer);
 
         } catch (Exception e) {
+            e.printStackTrace();
             resp.getWriter().write("");
         }
     }

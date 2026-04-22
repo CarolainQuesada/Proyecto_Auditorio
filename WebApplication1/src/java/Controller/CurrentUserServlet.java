@@ -1,26 +1,24 @@
 package Controller;
 
-import java.io.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import java.io.IOException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.*;
 
-@WebServlet("/CurrentUserServlet")  
+@WebServlet("/currentUser")
 public class CurrentUserServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
-        
-        resp.setContentType("text/plain");
-        resp.setCharacterEncoding("UTF-8");
+
+        resp.setContentType("text/plain;charset=UTF-8");
 
         HttpSession session = req.getSession(false);
 
         if (session != null && session.getAttribute("emailUsuario") != null) {
             resp.getWriter().write(session.getAttribute("emailUsuario").toString());
         } else {
-            resp.getWriter().write("");
+            resp.getWriter().write("NO_SESSION");
         }
     }
 }

@@ -1,14 +1,17 @@
 package Controller;
 
-import javax.servlet.*;
 import javax.servlet.http.*;
 import javax.servlet.annotation.WebServlet;
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 
 @WebServlet("/confirmReservation")
 public class ConfirmReservationServlet extends HttpServlet {
 
+    @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
 
@@ -28,21 +31,23 @@ public class ConfirmReservationServlet extends HttpServlet {
             return;
         }
 
-        try {
+        try (
             Socket socket = new Socket("localhost", 5000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        ) {
+            out.println("CONFIRM;" + id);
 
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream in = new DataInputStream(socket.getInputStream());
+            String responseServer = in.readLine();
 
-            out.writeUTF("CONFIRM;" + id);
-
-            in.readUTF();
-
-            socket.close();
-
-            resp.sendRedirect("admin.html?msg=confirmed");
+            if (responseServer != null && responseServer.toLowerCase().contains("confirm")) {
+                resp.sendRedirect("admin.html?msg=confirmed");
+            } else {
+                resp.sendRedirect("admin.html?msg=error");
+            }
 
         } catch (Exception e) {
+            e.printStackTrace();
             resp.sendRedirect("admin.html?msg=server");
         }
     }

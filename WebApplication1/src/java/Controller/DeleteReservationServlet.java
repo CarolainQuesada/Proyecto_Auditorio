@@ -1,20 +1,22 @@
 package Controller;
 
-import java.io.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import javax.servlet.annotation.WebServlet;
-import java.net.*;
+import javax.servlet.http.*;
 
 @WebServlet("/deleteReservation")
 public class DeleteReservationServlet extends HttpServlet {
 
+    @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
 
         String id = req.getParameter("id");
-
-        resp.setContentType("text/plain");
+        resp.setContentType("text/plain;charset=UTF-8");
 
         HttpSession session = req.getSession(false);
 
@@ -32,21 +34,23 @@ public class DeleteReservationServlet extends HttpServlet {
             return;
         }
 
-        try {
+        try (
             Socket socket = new Socket("localhost", 5000);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        ) {
+            out.println("DELETE;" + id);
+            String responseServer = in.readLine();
 
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-
-            out.writeUTF("DELETE;" + id);
-
-            String responseServer = in.readUTF();
-
-            socket.close();
-
-            resp.getWriter().write("ok");
+            if (responseServer != null && !responseServer.toLowerCase().contains("error")) {
+                resp.getWriter().write("ok");
+            } else {
+                resp.setStatus(500);
+                resp.getWriter().write("error");
+            }
 
         } catch (Exception e) {
+            e.printStackTrace();
             resp.setStatus(500);
             resp.getWriter().write("error");
         }
