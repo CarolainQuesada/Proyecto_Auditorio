@@ -1,6 +1,7 @@
 package service;
 
 import dao.ReservationDAO;
+import java.util.ArrayList;
 import model.Reservation;
 import model.ReservationEquipment;
 import java.util.List;
@@ -33,7 +34,6 @@ public class ReservationService {
             return "busy_time";
         }
 
-        // Crear reserva simple (sin equipos o con uno solo)
         boolean ok = dao.create(user, date, startTime, endTime, quantity);
         return ok ? "created" : "error";
     }
@@ -73,19 +73,36 @@ public class ReservationService {
         return ok ? "deleted" : "error";
     }
 
-    public String listReservations() {
-        List<Reservation> list = dao.getAll();
-        StringBuilder sb = new StringBuilder();
+public String listReservations() {
+    List<Reservation> list = dao.getAll();
+    StringBuilder sb = new StringBuilder();
 
-        for (Reservation r : list) {
-            sb.append(r.getId()).append(",")
-              .append(r.getDate()).append(",")
-              .append(r.getStartTime()).append(",")
-              .append(r.getEndTime()).append(",")
-              .append(r.getQuantity()).append(",")
-              .append(r.getStatus()).append("|");
+    for (Reservation r : list) {
+        // Cargar equipos de esta reserva
+        Reservation full = dao.getByIdWithEquipment(r.getId());
+        List<ReservationEquipment> equipments = full.getEquipments();
+        
+        // Construir string de equipos: "1:2,3:1" = (eqId:qty, eqId:qty)
+        String equipStr = "";
+        if (!equipments.isEmpty()) {
+            List<String> parts = new ArrayList<>();
+            for (ReservationEquipment re : equipments) {
+                parts.add(re.getEquipmentId() + ":" + re.getQuantity());
+            }
+            equipStr = String.join(",", parts);
         }
-
-        return sb.toString();
+        
+        sb.append(r.getId()).append(",")
+          .append(r.getDate()).append(",")
+          .append(r.getStartTime()).append(",")
+          .append(r.getEndTime()).append(",")
+          .append(r.getQuantity()).append(",")
+          .append(r.getStatus()).append(",")
+          .append(r.getUser()).append(",")
+          .append(equipStr)           
+          .append("|");
     }
+
+    return sb.toString();
+}
 }

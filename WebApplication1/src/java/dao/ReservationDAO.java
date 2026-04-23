@@ -9,6 +9,29 @@ import java.util.List;
 import model.ReservationEquipment;
 
 public class ReservationDAO {
+   
+private boolean ensureUserExists(Connection con, String email) throws SQLException {
+    String checkSql = "SELECT COUNT(*) FROM users WHERE email = ?";
+    try (PreparedStatement checkPs = con.prepareStatement(checkSql)) {
+        checkPs.setString(1, email);
+        ResultSet rs = checkPs.executeQuery();
+        if (rs.next() && rs.getInt(1) > 0) {
+            return true; 
+        }
+    }
+    
+    String insertSql = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
+    
+    try (PreparedStatement ps = con.prepareStatement(insertSql)) {
+        ps.setString(1, email);
+        ps.setString(2, "auto_" + System.currentTimeMillis()); 
+        ps.setString(3, "CLIENT"); 
+        
+        int rows = ps.executeUpdate();
+        System.out.println("[DAO] Usuario auto-creado: " + email);
+        return rows > 0;
+    }
+}
 
     public boolean create(String user, String date, String start, String end, int quantity) {
         String sql = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
@@ -239,73 +262,71 @@ public class ReservationDAO {
         this.equipmentDAO = new ReservationEquipmentDAO();
     }
 
-    public boolean createWithEquipment(String user, String date, String start, String end,
-            int quantity, List<ReservationEquipment> equipments) {
-        Connection con = null;
-        try {
-            con = DBConnection.getConnection();
-            con.setAutoCommit(false); // INICIAR TRANSACCIÓN
-
-            String sqlRes = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) "
-                    + "VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
-            int reservationId;
-
-            try (PreparedStatement ps = con.prepareStatement(sqlRes, Statement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1, user);
-                ps.setString(2, date);
-                ps.setString(3, start);
-                ps.setString(4, end);
-                ps.setInt(5, quantity);
-
-                if (ps.executeUpdate() == 0) {
-                    con.rollback();
-                    return false;
-                }
-
-                ResultSet rs = ps.getGeneratedKeys();
-                reservationId = rs.next() ? rs.getInt(1) : -1;
-                rs.close();
-            }
-
-            if (reservationId <= 0) {
+public boolean createWithEquipment(String user, String date, String start, String end, 
+                                   int quantity, List<ReservationEquipment> equipments) {
+    Connection con = null;
+    try {
+        con = DBConnection.getConnection();
+        con.setAutoCommit(false);
+        
+        if (!ensureUserExists(con, user)) {
+            System.err.println("[DAO ERROR] No se pudo crear el usuario: " + user);
+            con.rollback();
+            return false;
+        }
+        
+        String sqlRes = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) " +
+                       "VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
+        int reservationId;
+        
+        try (PreparedStatement ps = con.prepareStatement(sqlRes, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, user);
+            ps.setString(2, date);
+            ps.setString(3, start);
+            ps.setString(4, end);
+            ps.setInt(5, quantity);
+            
+            if (ps.executeUpdate() == 0) {
                 con.rollback();
                 return false;
             }
-
-            if (equipments != null && !equipments.isEmpty()) {
-                for (ReservationEquipment re : equipments) {
-                    re.setReservationId(reservationId);
-                    if (!equipmentDAO.create(con, re)) { // <--- Pasamos 'con' aquí) {
-                        con.rollback();
-                        return false;
-                    }
-                }
-            }
-
-            con.commit();
-            return true;
-
-        } catch (SQLException e) {
-            System.err.println("[DAO ERROR] createWithEquipment: " + e.getMessage());
-            try {
-                if (con != null) {
-                    con.rollback();
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+            
+            ResultSet rs = ps.getGeneratedKeys();
+            reservationId = rs.next() ? rs.getInt(1) : -1;
+            rs.close();
+        }
+        
+        if (reservationId <= 0) {
+            con.rollback();
             return false;
-        } finally {
-            try {
-                if (con != null) {
-                    con.setAutoCommit(true);
-                    con.close();
+        }
+        
+        if (equipments != null && !equipments.isEmpty()) {
+            for (ReservationEquipment re : equipments) {
+                re.setReservationId(reservationId);
+                if (!equipmentDAO.create(con, re)) {
+                    con.rollback();
+                    return false;
                 }
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
         }
+        
+        con.commit();
+        return true;
+        
+    } catch (SQLException e) {
+        System.err.println("[DAO ERROR] createWithEquipment: " + e.getMessage());
+        try { if (con != null) con.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+        return false;
+    } finally {
+        try {
+            if (con != null) {
+                con.setAutoCommit(true);
+                con.close();
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
     }
+}
 
     public Reservation getByIdWithEquipment(int id) {
         Reservation res = getById(id);

@@ -7,11 +7,15 @@
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/model/ReservationEquipment.java</file>
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/dao/ReservationEquipmentDAO.java</file>
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/dao/ReservationDAO.java</file>
-            <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/test/PruebaDirecta.java</file>
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/Controller/ReservationServlet.java</file>
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/Controller/EditReservationServlet.java</file>
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/socket/ServerGUI.java</file>
             <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/socket/ClientHandler.java</file>
+            <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/service/ReservationService.java</file>
+            <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/dao/EquipmentDAO.java</file>
+            <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/src/java/util/DBConnection.java</file>
+            <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/web/dashboard.html</file>
+            <file>file:/C:/Users/HP/Desktop/SO/Proyecto_Auditorio/WebApplication1/web/index.html</file>
         </group>
     </open-files>
 </project-private>
