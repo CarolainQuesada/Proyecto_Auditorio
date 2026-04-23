@@ -5,9 +5,9 @@ import java.sql.DriverManager;
 
 public class DBConnection {
 
-    private static final String URL = "";
-    private static final String USER = "";
-    private static final String PASSWORD = "";
+    private static final String URL = " ";
+    private static final String USER = " "; 
+    private static final String PASSWORD = " ";
 
     public static Connection getConnection() {
         try {

@@ -6,14 +6,14 @@ import util.DBConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import model.ReservationEquipment;
 
 public class ReservationDAO {
 
     public boolean create(String user, String date, String start, String end, int quantity) {
         String sql = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, user);
             ps.setString(2, date);
@@ -35,9 +35,7 @@ public class ReservationDAO {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT * FROM reservations WHERE status != 'EXPIRED' ORDER BY date, start_time";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 list.add(mapReservation(rs));
@@ -54,8 +52,7 @@ public class ReservationDAO {
         List<Reservation> list = new ArrayList<>();
         String sql = "SELECT * FROM reservations WHERE date = ? AND status != 'EXPIRED'";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, date);
 
@@ -75,8 +72,7 @@ public class ReservationDAO {
     public Reservation getById(int id) {
         String sql = "SELECT * FROM reservations WHERE id = ?";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setInt(1, id);
 
@@ -100,8 +96,7 @@ public class ReservationDAO {
     public boolean update(Reservation reservation) {
         String sql = "UPDATE reservations SET date=?, start_time=?, end_time=?, quantity=?, status=? WHERE id=?";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, reservation.getDate());
             ps.setString(2, reservation.getStartTime());
@@ -122,8 +117,7 @@ public class ReservationDAO {
     public boolean updateStatus(int id, String status) {
         String sql = "UPDATE reservations SET status = ? WHERE id = ?";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, status);
             ps.setInt(2, id);
@@ -138,29 +132,53 @@ public class ReservationDAO {
     }
 
     public boolean delete(int id) {
-        String sql = "DELETE FROM reservations WHERE id = ?";
+        Connection con = null;
+        try {
+            con = DBConnection.getConnection();
+            con.setAutoCommit(false);
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            equipmentDAO.deleteByReservationId(id);
 
-            ps.setInt(1, id);
-
-            int rows = ps.executeUpdate();
-            return rows > 0;
+            String sql = "DELETE FROM reservations WHERE id = ?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, id);
+                int rows = ps.executeUpdate();
+                if (rows > 0) {
+                    con.commit();
+                    return true;
+                }
+            }
+            con.rollback();
+            return false;
 
         } catch (SQLException e) {
             System.err.println("[DAO ERROR] delete: " + e.getMessage());
+            try {
+                if (con != null) {
+                    con.rollback();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
             return false;
+        } finally {
+            try {
+                if (con != null) {
+                    con.setAutoCommit(true);
+                    con.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     public boolean existsOverlap(String date, String start, String end) {
-        String sql = "SELECT COUNT(*) FROM reservations " +
-                     "WHERE date = ? AND status != 'EXPIRED' " +
-                     "AND start_time < ? AND end_time > ?";
+        String sql = "SELECT COUNT(*) FROM reservations "
+                + "WHERE date = ? AND status != 'EXPIRED' "
+                + "AND start_time < ? AND end_time > ?";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, date);
             ps.setString(2, end);
@@ -180,13 +198,12 @@ public class ReservationDAO {
     }
 
     public int cleanExpired(int ttlMinutes) {
-        String sql = "UPDATE reservations " +
-                     "SET status = 'EXPIRED' " +
-                     "WHERE status = 'PENDING' " +
-                     "AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) > ?";
+        String sql = "UPDATE reservations "
+                + "SET status = 'EXPIRED' "
+                + "WHERE status = 'PENDING' "
+                + "AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) > ?";
 
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = DBConnection.getConnection(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setInt(1, ttlMinutes);
 
@@ -214,5 +231,87 @@ public class ReservationDAO {
         r.setQuantity(rs.getInt("quantity"));
         r.setStatus(rs.getString("status"));
         return r;
+    }
+
+    private ReservationEquipmentDAO equipmentDAO;
+
+    public ReservationDAO() {
+        this.equipmentDAO = new ReservationEquipmentDAO();
+    }
+
+    public boolean createWithEquipment(String user, String date, String start, String end,
+            int quantity, List<ReservationEquipment> equipments) {
+        Connection con = null;
+        try {
+            con = DBConnection.getConnection();
+            con.setAutoCommit(false); // INICIAR TRANSACCIÓN
+
+            String sqlRes = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) "
+                    + "VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
+            int reservationId;
+
+            try (PreparedStatement ps = con.prepareStatement(sqlRes, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, user);
+                ps.setString(2, date);
+                ps.setString(3, start);
+                ps.setString(4, end);
+                ps.setInt(5, quantity);
+
+                if (ps.executeUpdate() == 0) {
+                    con.rollback();
+                    return false;
+                }
+
+                ResultSet rs = ps.getGeneratedKeys();
+                reservationId = rs.next() ? rs.getInt(1) : -1;
+                rs.close();
+            }
+
+            if (reservationId <= 0) {
+                con.rollback();
+                return false;
+            }
+
+            if (equipments != null && !equipments.isEmpty()) {
+                for (ReservationEquipment re : equipments) {
+                    re.setReservationId(reservationId);
+                    if (!equipmentDAO.create(con, re)) { // <--- Pasamos 'con' aquí) {
+                        con.rollback();
+                        return false;
+                    }
+                }
+            }
+
+            con.commit();
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] createWithEquipment: " + e.getMessage());
+            try {
+                if (con != null) {
+                    con.rollback();
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            return false;
+        } finally {
+            try {
+                if (con != null) {
+                    con.setAutoCommit(true);
+                    con.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public Reservation getByIdWithEquipment(int id) {
+        Reservation res = getById(id);
+        if (res != null) {
+            res.setEquipments(equipmentDAO.getByReservationId(id));
+        }
+        return res;
     }
 }

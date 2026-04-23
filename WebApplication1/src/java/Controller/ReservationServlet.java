@@ -1,10 +1,10 @@
 package Controller;
 
 import util.SocketClient;
-import javax.servlet.*;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
-import javax.servlet.annotation.WebServlet;
 import java.time.LocalDate;
 
 @WebServlet("/ReservationServlet")
@@ -16,24 +16,25 @@ public class ReservationServlet extends HttpServlet {
 
         HttpSession session = request.getSession(false);
 
-        if (session == null) {
+        if (session == null || session.getAttribute("emailUsuario") == null) {
             response.sendRedirect("index.html");
             return;
         }
 
         String user = (String) session.getAttribute("emailUsuario");
 
-        if (user == null) {
-            response.sendRedirect("index.html");
-            return;
-        }
-
         String date = request.getParameter("date");
         String start = request.getParameter("start_time");
         String end = request.getParameter("end_time");
         String quantity = request.getParameter("quantity");
-        String equipment = request.getParameter("equipment");
-        String eqQty = request.getParameter("eqQty");
+        
+        String[] equipmentIds = request.getParameterValues("equipment"); 
+        String[] equipmentQtys = request.getParameterValues("eqQty");    
+        
+        String equipmentStr = (equipmentIds != null && equipmentIds.length > 0) 
+                              ? String.join(",", equipmentIds) : "";
+        String eqQtyStr = (equipmentQtys != null && equipmentQtys.length > 0) 
+                          ? String.join(",", equipmentQtys) : "";
 
         try {
             if (date == null || date.trim().isEmpty()
@@ -59,7 +60,7 @@ public class ReservationServlet extends HttpServlet {
 
         String command = String.format(
                 "RESERVE;%s;%s;%s;%s;%s;%s;%s",
-                user, date, start, end, quantity, equipment, eqQty
+                user, date, start, end, quantity, equipmentStr, eqQtyStr
         );
 
         System.out.println("[Servlet] Enviando: " + command);

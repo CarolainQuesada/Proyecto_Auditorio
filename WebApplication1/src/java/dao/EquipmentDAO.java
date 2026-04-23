@@ -2,8 +2,13 @@ package dao;
 
 import util.DBConnection;
 import java.sql.*;
+import model.ReservationEquipment;
 
 public class EquipmentDAO {
+
+    static boolean create(ReservationEquipment re) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
 
     public int getEquipmentIdByName(String name) {
         String sql = "SELECT id FROM equipment WHERE name = ?";

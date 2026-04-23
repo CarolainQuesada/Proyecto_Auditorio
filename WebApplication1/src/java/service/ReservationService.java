@@ -2,15 +2,16 @@ package service;
 
 import dao.ReservationDAO;
 import model.Reservation;
+import model.ReservationEquipment;
 import java.util.List;
 
 public class ReservationService {
 
     private final ReservationDAO dao = new ReservationDAO();
 
-    public String createReservation(String user, String date, String startTime, String endTime,
-                                    int quantity, String equipmentType, int equipmentQty) {
-
+    public String createReservationWithEquipment(String user, String date, String startTime, String endTime,
+    int quantity, List<ReservationEquipment> equipments) {
+        
         if (startTime.compareTo(endTime) >= 0) return "hour";
         if (quantity <= 0 || quantity > 200) return "quantity";
 
@@ -18,12 +19,27 @@ public class ReservationService {
             return "busy_time";
         }
 
+        boolean ok = dao.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
+        return ok ? "created" : "error";
+    }
+
+    public String createReservation(String user, String date, String startTime, String endTime,
+    int quantity, String equipmentType, int equipmentQty) {
+        
+        if (startTime.compareTo(endTime) >= 0) return "hour";
+        if (quantity <= 0 || quantity > 200) return "quantity";
+
+        if (dao.existsOverlap(date, startTime, endTime)) {
+            return "busy_time";
+        }
+
+        // Crear reserva simple (sin equipos o con uno solo)
         boolean ok = dao.create(user, date, startTime, endTime, quantity);
         return ok ? "created" : "error";
     }
 
     public String editReservation(int id, String date, String startTime, String endTime,
-                                  int quantity, String status) {
+    int quantity, String status) {
 
         try {
             if (startTime.compareTo(endTime) >= 0) return "hour";

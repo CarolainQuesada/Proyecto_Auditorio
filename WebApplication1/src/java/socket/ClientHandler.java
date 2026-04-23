@@ -1,8 +1,11 @@
 package socket;
 
 import service.ReservationService;
+import model.ReservationEquipment;
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClientHandler extends Thread {
 
@@ -44,23 +47,18 @@ public class ClientHandler extends Thread {
                 case "RESERVE":
                     handleReserve(parts, out);
                     break;
-
                 case "EDIT":
                     handleEdit(parts, out);
                     break;
-
                 case "CONFIRM":
                     handleConfirm(parts, out);
                     break;
-
                 case "DELETE":
                     handleDelete(parts, out);
                     break;
-
                 case "LIST":
                     handleList(out);
                     break;
-
                 default:
                     out.println("ERROR: Unknown command");
                     serverGUI.log("Unknown command from " + clientInfo + ": " + action);
@@ -80,7 +78,7 @@ public class ClientHandler extends Thread {
 
     private void handleReserve(String[] parts, PrintWriter out) {
         try {
-            if (parts.length < 8) {
+            if (parts.length < 6) {
                 out.println("ERROR: Insufficient parameters");
                 return;
             }
@@ -90,17 +88,38 @@ public class ClientHandler extends Thread {
             String horaInicio = parts[3];
             String horaFin = parts[4];
             int cantidad = Integer.parseInt(parts[5]);
-            String equipoType = parts[6];
-            int equipoQty = Integer.parseInt(parts[7]);
+            
+            String equipmentIdsStr = (parts.length > 6) ? parts[6] : "";
+            String equipmentQtysStr = (parts.length > 7) ? parts[7] : "";
+            
+            List<ReservationEquipment> equipments = new ArrayList<>();
+            if (!equipmentIdsStr.isEmpty()) {
+                String[] eqIds = equipmentIdsStr.split(",");
+                String[] eqQtys = equipmentQtysStr.split(",");
+                
+                for (int i = 0; i < eqIds.length; i++) {
+                    try {
+                        int eqId = Integer.parseInt(eqIds[i].trim());
+                        int eqQty = (i < eqQtys.length) ? Integer.parseInt(eqQtys[i].trim()) : 1;
+                        
+                        if (eqQty > 0 && eqId > 0) {
+                            equipments.add(new ReservationEquipment(0, eqId, eqQty));
+                        }
+                    } catch (NumberFormatException e) {
+                        // Ignorar valores inválidos
+                        System.err.println("[ClientHandler] Invalid equipment param: " + e.getMessage());
+                    }
+                }
+            }
 
-            serverGUI.log("Reserve request by: " + usuario + " | Date: " + fecha + " | " + horaInicio + "-" + horaFin);
+            serverGUI.log("Reserve: " + usuario + " | " + fecha + " " + horaInicio + "-" + horaFin + " | Qty: " + cantidad + " | Equipments: " + equipments.size());
 
-            String resultado = reservationService.createReservation(
-                usuario, fecha, horaInicio, horaFin, cantidad, equipoType, equipoQty
+            String resultado = reservationService.createReservationWithEquipment(
+                usuario, fecha, horaInicio, horaFin, cantidad, equipments
             );
 
             out.println(resultado);
-            serverGUI.log("Reservation result for " + usuario + ": " + resultado);
+            serverGUI.log("Result for " + usuario + ": " + resultado);
 
         } catch (Exception e) {
             out.println("ERROR: " + e.getMessage());
@@ -126,7 +145,6 @@ public class ClientHandler extends Thread {
 
             String resultado = reservationService.editReservation(id, fecha, horaInicio, horaFin, cantidad, status);
             out.println(resultado);
-
             serverGUI.log("Edit result for ID " + id + ": " + resultado);
 
         } catch (Exception e) {
@@ -138,12 +156,9 @@ public class ClientHandler extends Thread {
         try {
             int id = Integer.parseInt(parts[1]);
             serverGUI.log("Confirm request for reservation ID: " + id);
-
             String resultado = reservationService.confirmReservation(id);
             out.println(resultado);
-
             serverGUI.log("Confirm result for ID " + id + ": " + resultado);
-
         } catch (Exception e) {
             out.println("ERROR: " + e.getMessage());
         }
@@ -153,12 +168,9 @@ public class ClientHandler extends Thread {
         try {
             int id = Integer.parseInt(parts[1]);
             serverGUI.log("Delete request for reservation ID: " + id);
-
             String resultado = reservationService.deleteReservation(id);
             out.println(resultado);
-
             serverGUI.log("Delete result for ID " + id + ": " + resultado);
-
         } catch (Exception e) {
             out.println("ERROR: " + e.getMessage());
         }

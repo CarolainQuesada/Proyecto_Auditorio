@@ -1,5 +1,8 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Reservation {
 
     private int id;
@@ -77,5 +80,20 @@ public class Reservation {
 
     public Object getEquipmentType() {
         throw new UnsupportedOperationException("Not supported yet."); 
+    }
+    
+    private List<ReservationEquipment> equipments;
+    
+    public List<ReservationEquipment> getEquipments() {
+        if (equipments == null) equipments = new ArrayList<>();
+        return equipments;
+    }
+    
+    public void setEquipments(List<ReservationEquipment> equipments) {
+        this.equipments = equipments;
+    }
+    
+    public void addEquipment(ReservationEquipment equipment) {
+        getEquipments().add(equipment);
     }
 }
