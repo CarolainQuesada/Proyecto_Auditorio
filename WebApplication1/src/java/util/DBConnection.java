@@ -5,10 +5,9 @@ import java.sql.DriverManager;
 
 public class DBConnection {
 
-    private static final String URL = " ";
-    private static final String USER = " ";
-    private static final String PASSWORD = " ";
-
+private static final String URL = "jdbc:mysql://mysql-11b2f5ad-db-so.g.aivencloud.com:28915/auditorio?sslMode=REQUIRED";
+private static final String USER = "avnadmin";
+private static final String PASSWORD = "AVNS_BbW0UnDbv72t2jXued-";
     public static Connection getConnection() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
