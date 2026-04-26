@@ -141,7 +141,7 @@
             class="border px-3 py-2 rounded text-sm w-56">
           <button onclick="cargarLogs()"
             class="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 text-sm">
-            🔄 Actualizar
+             Actualizar
           </button>
         </div>
       </div>
@@ -178,6 +178,7 @@
 
   </div>
 
+  <!-- Equipment Edit Modal -->
   <div id="modalEquipos" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg w-full max-w-2xl">
       <h3 class="font-bold text-lg mb-4">Editar Equipamiento</h3>
@@ -192,6 +193,24 @@
   </div>
 
   <script>
+    /**
+     * @fileoverview Admin Reservations Panel
+     * @description Administrative dashboard for managing space reservations at UNA.
+     * Provides full CRUD operations over reservations, equipment assignment management,
+     * and a real-time system audit log (bitácora).
+     *
+     * On load, verifies that the current session has the ADMIN role.
+     * If not, redirects the user to index.html.
+     *
+     * @module admin
+     */
+
+    /**
+     * Role guard: fetches the current user's role from the server.
+     * If the role is not "ADMIN", redirects to index.html.
+     *
+     * @listens fetch:role
+     */
     fetch("role")
       .then(res => res.text())
       .then(role => {
@@ -200,6 +219,12 @@
         }
       });
 
+    /**
+     * Displays the currently authenticated admin username in the header.
+     * Falls back to "Admin" if the request fails.
+     *
+     * @listens fetch:currentUser
+     */
     fetch("currentUser")
       .then(res => res.text())
       .then(user => {
@@ -209,28 +234,37 @@
         document.getElementById("user").innerText = "Admin";
       });
 
+    /** @type {URLSearchParams} Query parameters from the current URL. */
     const params = new URLSearchParams(window.location.search);
+
+    /** @type {string|null} Message code returned from server after an operation. */
     const msg = params.get("msg");
+
+    /** @type {HTMLElement} DOM element used to display status messages to the admin. */
     const mensaje = document.getElementById("mensaje");
 
+    /**
+     * Mapping of server response codes to localized HTML feedback messages.
+     * @type {Object.<string, string>}
+     */
     const mensajes = {
-      "ok": "<div class='text-green-600'>✔ Operación exitosa</div>",
-      "busy": "<div class='text-red-600'>❌ Horario ocupado</div>",
-      "busy_time": "<div class='text-red-600'>❌ Conflicto de horario</div>",
-      "busy_equipment": "<div class='text-red-600'>❌ Equipamiento no disponible</div>",
-      "busy_capacity": "<div class='text-red-600'>❌ Capacidad excedida</div>",
-      "hour": "<div class='text-red-600'>❌ Hora inválida</div>",
-      "quantity": "<div class='text-red-600'>❌ Cantidad inválida</div>",
-      "past": "<div class='text-red-600'>❌ No se permiten fechas pasadas</div>",
-       "expired": "<div class='text-red-600'>❌ La reserva ya expiró y no se puede confirmar</div>",
-      "ttl": "<div class='text-blue-600'>🧹 TTL ejecutado</div>",
-      "confirmed": "<div class='text-green-600'>✔ Confirmada</div>",
-      "equipment_added": "<div class='text-green-600'>✔ Equipamiento agregado</div>",
-      "equipment_updated": "<div class='text-green-600'>✔ Equipamiento actualizado</div>",
-      "equipment_deleted": "<div class='text-green-600'>✔ Equipamiento eliminado</div>",
-      "error": "<div class='text-red-600'>❌ Error</div>",
-      "server": "<div class='text-red-600'>❌ Servidor no disponible</div>",
-      "unauthorized": "<div class='text-red-600'>❌ No autorizado</div>"
+      "ok":               "<div class='text-green-600'> Operación exitosa</div>",
+      "busy":             "<div class='text-red-600'> Horario ocupado</div>",
+      "busy_time":        "<div class='text-red-600'> Conflicto de horario</div>",
+      "busy_equipment":   "<div class='text-red-600'> Equipamiento no disponible</div>",
+      "busy_capacity":    "<div class='text-red-600'> Capacidad excedida</div>",
+      "hour":             "<div class='text-red-600'> Hora inválida</div>",
+      "quantity":         "<div class='text-red-600'> Cantidad inválida</div>",
+      "past":             "<div class='text-red-600'> No se permiten fechas pasadas</div>",
+      "expired":          "<div class='text-red-600'> La reserva ya expiró y no se puede confirmar</div>",
+      "ttl":              "<div class='text-blue-600'> TTL ejecutado</div>",
+      "confirmed":        "<div class='text-green-600'> Confirmada</div>",
+      "equipment_added":  "<div class='text-green-600'> Equipamiento agregado</div>",
+      "equipment_updated":"<div class='text-green-600'> Equipamiento actualizado</div>",
+      "equipment_deleted":"<div class='text-green-600'> Equipamiento eliminado</div>",
+      "error":            "<div class='text-red-600'> Error</div>",
+      "server":           "<div class='text-red-600'> Servidor no disponible</div>",
+      "unauthorized":     "<div class='text-red-600'> No autorizado</div>"
     };
 
     if (msg && mensajes[msg]) {
@@ -238,18 +272,33 @@
       history.replaceState(null, null, window.location.pathname);
     }
 
+    /**
+     * Human-readable names for equipment items keyed by their numeric ID.
+     * @type {Object.<string, string>}
+     */
     const EQUIPMENT_NAMES = {
       "1": "Proyector",
       "2": "Micrófono",
       "3": "Sonido"
     };
 
+    /**
+     * Maximum quantity allowed per equipment type.
+     * @type {Object.<string, number>}
+     */
     const equipmentMax = {
       "1": 2,
       "2": 5,
       "3": 3
     };
 
+    /**
+     * Attaches change event listeners to all equipment checkboxes in the
+     * create/edit form. When checked, enables the quantity input and sets
+     * its minimum to 1. When unchecked, resets and disables it.
+     *
+     * @returns {void}
+     */
     function inicializarEquipamientoForm() {
       document.querySelectorAll(".equipment-check").forEach(check => {
         check.addEventListener("change", function () {
@@ -270,6 +319,12 @@
       });
     }
 
+    /**
+     * Resets all equipment checkboxes and quantity inputs to their
+     * default unchecked/disabled state in the create/edit form.
+     *
+     * @returns {void}
+     */
     function limpiarEquipamientoForm() {
       document.querySelectorAll(".equipment-check").forEach(check => {
         check.checked = false;
@@ -282,6 +337,13 @@
       });
     }
 
+    /**
+     * Validates that each selected equipment item has a quantity within
+     * the allowed range [1, max]. Displays an error message on failure.
+     *
+     * @returns {boolean} {@code true} if all equipment quantities are valid,
+     *                    {@code false} otherwise.
+     */
     function validarEquipamientoAdmin() {
       const selectedEquipments = document.querySelectorAll(".equipment-check:checked");
 
@@ -293,7 +355,7 @@
 
         if (qtyEq < 1 || qtyEq > maxEq) {
           mensaje.innerHTML =
-            `<div class='text-red-600'>❌ Cantidad inválida para equipo. Máximo permitido: ${maxEq}</div>`;
+            `<div class='text-red-600'> Cantidad inválida para equipo. Máximo permitido: ${maxEq}</div>`;
           return false;
         }
       }
@@ -301,10 +363,26 @@
       return true;
     }
 
+    /**
+     * Returns the human-readable name for a given equipment ID.
+     * Falls back to "Equipo #<id>" if the ID is not recognized.
+     *
+     * @param {string} id - The numeric equipment identifier as a string.
+     * @returns {string} The display name of the equipment.
+     */
     function getEquipmentName(id) {
-      return EQUIPMENT_NAMES[id] || "Equipo #" + id;
+      return EQUIPMENT_NAMES[id] || "Equipo " + id;
     }
 
+    /**
+     * Parses a comma-separated equipment string into an array of objects.
+     * Each segment has the format {@code "id:qty"}.
+     *
+     * @param {string} equipStr - Raw equipment string from the server,
+     *                            e.g. {@code "1:2,3:1"}.
+     * @returns {Array.<{id: string, qty: number}>} Array of equipment entries,
+     *          or an empty array if the input is empty or null.
+     */
     function parseEquipments(equipStr) {
       if (!equipStr || equipStr.trim() === "") return [];
 
@@ -317,6 +395,14 @@
       });
     }
 
+    /**
+     * Renders equipment badges as HTML for a given reservation row in the table.
+     * Each badge includes a delete button that calls {@link eliminarEquipamento}.
+     *
+     * @param {Array.<{id: string, qty: number}>} equipments - List of equipment entries.
+     * @param {number} reservationId - ID of the reservation these badges belong to.
+     * @returns {string} HTML string containing inline badges, or a dash if empty.
+     */
     function renderEquipmentBadges(equipments, reservationId) {
       if (!equipments || equipments.length === 0) {
         return '<span class="text-gray-400 text-xs">-</span>';
@@ -331,6 +417,13 @@
       `).join("");
     }
 
+    /**
+     * Fetches all reservations from the server endpoint {@code listReservations}
+     * and renders them as table rows inside {@code #tabla}.
+     * Handles empty results, server errors, and parse failures gracefully.
+     *
+     * @returns {void}
+     */
     function cargarReservas() {
       fetch("listReservations")
         .then(res => res.text())
@@ -344,7 +437,7 @@
           }
 
           if (data.startsWith("ERROR")) {
-            mensaje.innerHTML = "<div class='text-red-600'>❌ " + data + "</div>";
+            mensaje.innerHTML = "<div class='text-red-600'> " + data + "</div>";
             document.getElementById("tabla").innerHTML = "";
             return;
           }
@@ -372,19 +465,19 @@
                 <td class="p-2">
                   ${p[5] === "PENDING" ? `
                     <button type="button" onclick="window.location.href='confirmReservation?id=${p[0]}'"
-                      class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700" title="Confirmar">✔</button>
+                      class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700" title="Confirmar"></button>
                   ` : ""}
 
                   ${(p[5] === "PENDING" || p[5] === "CONFIRMED") ? `
                     <button type="button" onclick="editar(${p[0]}, '${p[1]}', '${p[2]}', '${p[3]}', ${p[4]}, '${p[5]}')"
-                      class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 ml-1" title="Editar">✎</button>
+                      class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 ml-1" title="Editar"></button>
                   ` : ""}
 
                   <button type="button" onclick="eliminar(${p[0]})"
                     class="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 ml-1" title="Eliminar">✕</button>
 
                   <button type="button" onclick="verEquipos(${p[0]}, '${p[7] || ""}')"
-                    class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 ml-1" title="Ver equipos">🔧</button>
+                    class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 ml-1" title="Ver equipos">?</button>
                 </td>
               </tr>
             `;
@@ -394,17 +487,37 @@
         })
         .catch(err => {
           console.error(err);
-          mensaje.innerHTML = "<div class='text-red-600'>❌ Error cargando reservas</div>";
+          mensaje.innerHTML = "<div class='text-red-600'> Error cargando reservas</div>";
         });
     }
 
+    /**
+     * Returns the Tailwind CSS class string corresponding to a reservation status.
+     *
+     * @param {string} e - Reservation status code: {@code "CONFIRMED"},
+     *                     {@code "PENDING"}, or {@code "EXPIRED"}.
+     * @returns {string} CSS class string for badge styling.
+     */
     function colorEstado(e) {
       if (e === "CONFIRMED") return "bg-green-100 text-green-700";
-      if (e === "PENDING") return "bg-yellow-100 text-yellow-700";
-      if (e === "EXPIRED") return "bg-gray-100 text-gray-500";
+      if (e === "PENDING")   return "bg-yellow-100 text-yellow-700";
+      if (e === "EXPIRED")   return "bg-gray-100 text-gray-500";
       return "bg-gray-100";
     }
 
+    /**
+     * Populates the create/edit form with data from an existing reservation,
+     * switching the form into edit mode. Hides the equipment section since
+     * equipment is managed separately via the modal.
+     *
+     * @param {number} id        - Reservation ID.
+     * @param {string} fecha     - Reservation date in {@code YYYY-MM-DD} format.
+     * @param {string} inicio    - Start time in {@code HH:mm} format.
+     * @param {string} fin       - End time in {@code HH:mm} format.
+     * @param {number} cantidad  - Number of attendees.
+     * @param {string} estado    - Current status ({@code PENDING}, {@code CONFIRMED}, etc.).
+     * @returns {void}
+     */
     function editar(id, fecha, inicio, fin, cantidad, estado) {
       document.getElementById("idReserva").value = id;
       document.getElementById("fechaInput").value = fecha;
@@ -422,6 +535,12 @@
       limpiarEquipamientoForm();
     }
 
+    /**
+     * Resets the create/edit form to its default create state,
+     * clearing all inputs and restoring the original action URL and button labels.
+     *
+     * @returns {void}
+     */
     function cancelarEdicion() {
       document.getElementById("formReserva").reset();
       document.getElementById("idReserva").value = "";
@@ -436,19 +555,36 @@
       limpiarEquipamientoForm();
     }
 
+    /**
+     * Prompts the admin for confirmation and, if confirmed, sends a DELETE
+     * request to {@code deleteReservation?id=<id>}. Refreshes the table on success.
+     *
+     * @param {number} id - ID of the reservation to delete.
+     * @returns {void}
+     */
     function eliminar(id) {
       if (!confirm("¿Eliminar esta reserva?")) return;
 
       fetch("deleteReservation?id=" + id)
         .then(() => {
-          mensaje.innerHTML = "<div class='text-green-600'>✔ Reserva eliminada</div>";
+          mensaje.innerHTML = "<div class='text-green-600'> Reserva eliminada</div>";
           cargarReservas();
         })
         .catch(() => {
-          mensaje.innerHTML = "<div class='text-red-600'>❌ Error al eliminar</div>";
+          mensaje.innerHTML = "<div class='text-red-600'> Error al eliminar</div>";
         });
     }
 
+    /**
+     * Opens the equipment management modal for a reservation.
+     * Renders current equipment with update/delete controls, and
+     * provides a form to add new equipment items not yet assigned.
+     *
+     * @param {number} reservationId - ID of the reservation to manage.
+     * @param {string} equipStr      - Raw equipment string from the server
+     *                                 (e.g. {@code "1:2,3:1"}).
+     * @returns {void}
+     */
     function verEquipos(reservationId, equipStr) {
       const equipments = parseEquipments(equipStr);
       const container = document.getElementById("listaEquiposModal");
@@ -542,6 +678,13 @@
       document.getElementById("modalEquipos").classList.remove("hidden");
     }
 
+    /**
+     * Updates the {@code max} attribute and clamps the value of the
+     * "add new equipment" quantity input based on the currently selected
+     * equipment type in the modal dropdown.
+     *
+     * @returns {void}
+     */
     function actualizarMaxNuevoEquipo() {
       const select = document.getElementById("nuevoEquipoId");
       const qty = document.getElementById("nuevoEquipoQty");
@@ -558,11 +701,26 @@
       }
     }
 
+    /**
+     * Closes the equipment modal and refreshes the reservations table
+     * to reflect any changes made.
+     *
+     * @returns {void}
+     */
     function cerrarModalEquipos() {
       document.getElementById("modalEquipos").classList.add("hidden");
       cargarReservas();
     }
 
+    /**
+     * Submits a POST form to {@code admin/equipment} with action {@code "update"}
+     * to change the quantity of an equipment item already assigned to a reservation.
+     * Validates the quantity against the allowed maximum before submitting.
+     *
+     * @param {number} reservationId - ID of the reservation to update.
+     * @param {number} equipmentId   - ID of the equipment item to update.
+     * @returns {void}
+     */
     function actualizarEquipamento(reservationId, equipmentId) {
       const input = document.getElementById(`eq-qty-${equipmentId}`);
       const newQty = parseInt(input.value || "0");
@@ -587,6 +745,14 @@
       form.submit();
     }
 
+    /**
+     * Submits a POST form to {@code admin/equipment} with action {@code "add"}
+     * to assign a new equipment item to a reservation.
+     * Validates the quantity before submitting and alerts if no equipment is available.
+     *
+     * @param {number} reservationId - ID of the reservation to add equipment to.
+     * @returns {void}
+     */
     function agregarEquipamento(reservationId) {
       const select = document.getElementById("nuevoEquipoId");
       const qtyInput = document.getElementById("nuevoEquipoQty");
@@ -619,6 +785,14 @@
       form.submit();
     }
 
+    /**
+     * Prompts for confirmation and submits a POST form to {@code admin/equipment}
+     * with action {@code "delete"} to remove a single equipment item from a reservation.
+     *
+     * @param {number} reservationId - ID of the reservation.
+     * @param {number} equipmentId   - ID of the equipment item to remove.
+     * @returns {void}
+     */
     function eliminarEquipamento(reservationId, equipmentId) {
       if (!confirm("¿Eliminar este equipamiento de la reserva?")) return;
 
@@ -635,6 +809,14 @@
       form.submit();
     }
 
+    /**
+     * Prompts for confirmation and submits a POST form to {@code admin/equipment}
+     * with action {@code "deleteAll"} to remove all equipment from a reservation.
+     * The reservation itself remains active after this operation.
+     *
+     * @param {number} reservationId - ID of the reservation to clear equipment from.
+     * @returns {void}
+     */
     function eliminarTodosEquipos(reservationId) {
       if (!confirm("¿Quitar todos los equipos de esta reserva? La reserva seguirá activa.")) return;
 
@@ -650,6 +832,19 @@
       form.submit();
     }
 
+    /**
+     * Validates the admin create/edit reservation form before submission.
+     * Checks for:
+     * <ul>
+     *   <li>A non-empty date that is not in the past.</li>
+     *   <li>Start time strictly less than end time.</li>
+     *   <li>Attendee count between 1 and 200.</li>
+     *   <li>Equipment quantities within allowed ranges (create mode only).</li>
+     * </ul>
+     *
+     * @returns {boolean} {@code true} if the form is valid and may be submitted,
+     *                    {@code false} otherwise.
+     */
     function validarAdminForm() {
       const fechaInput = document.getElementById("fechaInput").value;
 
@@ -663,7 +858,7 @@
       const fechaSeleccionada = new Date(fechaInput + "T00:00:00");
 
       if (fechaSeleccionada < hoy) {
-        mensaje.innerHTML = "<div class='text-red-600'>❌ No se permiten fechas pasadas</div>";
+        mensaje.innerHTML = "<div class='text-red-600'> No se permiten fechas pasadas</div>";
         return false;
       }
 
@@ -671,14 +866,14 @@
       const fin = document.getElementById("horaFinInput").value;
 
       if (inicio >= fin) {
-        mensaje.innerHTML = "<div class='text-red-600'>❌ Hora inválida</div>";
+        mensaje.innerHTML = "<div class='text-red-600'> Hora inválida</div>";
         return false;
       }
 
       const cantidad = parseInt(document.getElementById("cantidadInput").value);
 
       if (cantidad <= 0 || cantidad > 200) {
-        mensaje.innerHTML = "<div class='text-red-600'>❌ Cantidad inválida</div>";
+        mensaje.innerHTML = "<div class='text-red-600'> Cantidad inválida</div>";
         return false;
       }
 
@@ -689,11 +884,25 @@
       return validarEquipamientoAdmin();
     }
 
+    /**
+     * In-memory cache of all audit log entries fetched from the server.
+     * Used by {@link filtrarLogs} to filter without re-fetching.
+     *
+     * @type {Array.<{id: string, fecha: string, usuario: string, accion: string, descripcion: string}>}
+     */
     let todosLosLogs = [];
 
+    /**
+     * Fetches audit log entries from {@code listLogs} and stores them in
+     * {@link todosLosLogs}. Displays a loading indicator while fetching
+     * and calls {@link filtrarLogs} to render results on success.
+     * Handles authorization errors and generic network failures.
+     *
+     * @returns {void}
+     */
     function cargarLogs() {
       document.getElementById("mensajeLogs").innerHTML =
-        "<span class='text-gray-500'>⏳ Cargando bitácora...</span>";
+        "<span class='text-gray-500'> Cargando bitácora...</span>";
 
       fetch("listLogs")
         .then(res => res.text())
@@ -708,32 +917,39 @@
 
           if (data === "unauthorized" || data === "forbidden" || data.startsWith("ERROR")) {
             document.getElementById("mensajeLogs").innerHTML =
-              "<span class='text-red-600'>❌ " + data + "</span>";
+              "<span class='text-red-600'> " + data + "</span>";
             return;
           }
 
           todosLosLogs = data.split("|").filter(r => r.trim()).map(r => {
             const p = r.split("~");
             return {
-              id: p[0] || "",
-              fecha: p[1] || "",
-              usuario: p[2] || "",
-              accion: p[3] || "",
+              id:          p[0] || "",
+              fecha:       p[1] || "",
+              usuario:     p[2] || "",
+              accion:      p[3] || "",
               descripcion: p[4] || ""
             };
           });
 
           document.getElementById("mensajeLogs").innerHTML =
-            "<span class='text-green-600 text-sm'>✔ " + todosLosLogs.length + " registros</span>";
+            "<span class='text-green-600 text-sm'> " + todosLosLogs.length + " registros</span>";
 
           filtrarLogs();
         })
         .catch(() => {
           document.getElementById("mensajeLogs").innerHTML =
-            "<span class='text-red-600'>❌ Error al cargar bitácora</span>";
+            "<span class='text-red-600'> Error al cargar bitácora</span>";
         });
     }
 
+    /**
+     * Filters the cached log entries by the current value of the
+     * {@code #filtroLog} text input, matching against username and action fields
+     * (case-insensitive). Calls {@link renderLogs} with the filtered subset.
+     *
+     * @returns {void}
+     */
     function filtrarLogs() {
       const filtro = document.getElementById("filtroLog").value.toLowerCase();
 
@@ -746,6 +962,13 @@
       renderLogs(filtrados);
     }
 
+    /**
+     * Returns the Tailwind CSS class string for a log action badge
+     * based on keywords in the action string.
+     *
+     * @param {string} accion - The action code from the audit log entry.
+     * @returns {string} CSS class string for the badge styling.
+     */
     function colorAccion(accion) {
       if (accion.includes("OK") || accion.includes("CONFIRM")) {
         return "bg-green-100 text-green-700";
@@ -766,6 +989,16 @@
       return "bg-blue-100 text-blue-700";
     }
 
+    /**
+     * Renders an array of audit log entries as HTML table rows inside
+     * {@code #tablaLogs}. Edit-type entries ({@code EDIT_OK}) include an
+     * expandable detail row with structured field data.
+     * Displays a placeholder row if the array is empty.
+     *
+     * @param {Array.<{id: string, fecha: string, usuario: string, accion: string, descripcion: string}>} logs
+     *        Array of log entries to render.
+     * @returns {void}
+     */
     function renderLogs(logs) {
       if (logs.length === 0) {
         document.getElementById("tablaLogs").innerHTML =
@@ -819,7 +1052,7 @@
               <span class="px-2 py-1 rounded text-xs font-bold ${colorAccion(l.accion)}">
                 ${l.accion}
               </span>
-              ${esEdit ? '<span class="ml-1 text-xs text-gray-400">▼ ver detalle</span>' : ''}
+              ${esEdit ? '<span class="ml-1 text-xs text-gray-400"> ver detalle</span>' : ''}
             </td>
             <td class="p-2 text-xs text-left text-gray-500 italic">
               ${esEdit ? "Clic para ver qué se editó" : l.descripcion}
@@ -832,6 +1065,13 @@
       document.getElementById("tablaLogs").innerHTML = html;
     }
 
+    /**
+     * Toggles the visibility of the detail row for a given log entry.
+     * Only applicable to {@code EDIT_OK} log entries.
+     *
+     * @param {string} id - The log entry ID whose detail row should be toggled.
+     * @returns {void}
+     */
     function toggleDetalle(id) {
       const row = document.getElementById("detail-" + id);
       if (row) {
@@ -839,12 +1079,25 @@
       }
     }
 
+    /**
+     * Entry point executed when the DOM is fully loaded.
+     * Initializes equipment form listeners, loads reservation data,
+     * and loads the audit log.
+     *
+     * @listens window:load
+     */
     window.onload = function() {
       inicializarEquipamientoForm();
       cargarReservas();
       cargarLogs();
     };
 
+    /**
+     * Closes the equipment modal when the Escape key is pressed.
+     *
+     * @listens document:keydown
+     * @param {KeyboardEvent} e - The keyboard event.
+     */
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         cerrarModalEquipos();

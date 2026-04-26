@@ -8,9 +8,54 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+/**
+ * Servlet that handles administrative confirmation of pending reservations.
+ *
+ * <p>Mapped to {@code /confirmReservation}, this servlet accepts HTTP GET
+ * requests from the admin panel and forwards a {@code CONFIRM} command to
+ * the backend socket server running on {@code localhost:5000}.
+ *
+ * <p>Access is restricted to sessions with the {@code ADMIN} role:
+ * <ul>
+ *   <li>Unauthenticated requests are redirected to {@code index.html}.</li>
+ *   <li>Non-admin authenticated requests are redirected to
+ *       {@code dashboard.html?msg=unauthorized}.</li>
+ * </ul>
+ *
+ * <p>The socket protocol expects a single line in the form:
+ * <pre>{@code
+ * CONFIRM;<reservationId>
+ * }</pre>
+ * and receives one of the following responses:
+ * <ul>
+ *   <li>{@code "confirmed"} — reservation was successfully confirmed.</li>
+ *   <li>{@code "expired"}   — reservation had already expired and cannot
+ *                             be confirmed.</li>
+ *   <li>any other value     — treated as a generic error.</li>
+ * </ul>
+ *
+ * <p>On completion, the admin is redirected to {@code admin.html} with an
+ * appropriate {@code msg} query parameter ({@code confirmed}, {@code expired},
+ * {@code error}, or {@code server}).
+ *
+ * @see AdminEquipmentServlet
+ */
 @WebServlet("/confirmReservation")
 public class ConfirmReservationServlet extends HttpServlet {
 
+    /**
+     * Processes the confirmation request for a reservation.
+     *
+     * <p>Validates the session role, then opens a TCP connection to the
+     * backend server and sends the {@code CONFIRM;<id>} command. The server
+     * response is parsed and the admin is redirected accordingly.
+     *
+     * @param req  the HTTP request; must contain the {@code id} query parameter
+     *             with the reservation identifier to confirm
+     * @param resp the HTTP response used to issue the redirect
+     * @throws IOException if an I/O error occurs during socket communication
+     *                     or response redirect
+     */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
@@ -24,12 +69,13 @@ public class ConfirmReservationServlet extends HttpServlet {
             return;
         }
 
-    String role = session.getAttribute("role").toString();
+        String role = session.getAttribute("role").toString();
 
-    if (!"ADMIN".equalsIgnoreCase(role)) {
-        resp.sendRedirect("dashboard.html?msg=unauthorized");
-    return;
- }
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            resp.sendRedirect("dashboard.html?msg=unauthorized");
+            return;
+        }
+
         if (id == null || id.trim().isEmpty()) {
             resp.sendRedirect("admin.html?msg=error");
             return;
