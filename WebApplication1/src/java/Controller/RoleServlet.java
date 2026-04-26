@@ -2,10 +2,7 @@ package Controller;
 
 import java.io.IOException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import javax.servlet.http.*;
 
 @WebServlet("/role")
 public class RoleServlet extends HttpServlet {
@@ -18,10 +15,11 @@ public class RoleServlet extends HttpServlet {
 
         HttpSession session = req.getSession(false);
 
-        if (session != null && session.getAttribute("role") != null) {
-            resp.getWriter().write(session.getAttribute("role").toString());
-        } else {
+        if (session == null || session.getAttribute("role") == null) {
             resp.getWriter().write("NO_SESSION");
+            return;
         }
+
+        resp.getWriter().write(session.getAttribute("role").toString());
     }
 }

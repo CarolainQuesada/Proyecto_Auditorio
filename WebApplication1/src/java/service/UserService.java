@@ -12,32 +12,56 @@ public class UserService {
 
     public String loginOrRegisterUser(String email, String password) {
 
-        if (ADMIN_EMAIL.equalsIgnoreCase(email) && ADMIN_PASSWORD.equals(password)) {
-            return "ADMIN";
+        try {
+            if (ADMIN_EMAIL.equalsIgnoreCase(email) && ADMIN_PASSWORD.equals(password)) {
+                return "ADMIN";
+            }
+
+            User user = dao.login(email, password);
+
+            if (user != null) {
+                return normalizeRole(user.getRole());
+            }
+
+            User existingUser = dao.findByEmail(email);
+
+            if (existingUser != null) {
+                return "ERROR";
+            }
+
+            boolean created = dao.createClientUser(email, password);
+
+            if (!created) {
+                return "ERROR";
+            }
+
+            User newUser = dao.login(email, password);
+
+            if (newUser != null) {
+                return normalizeRole(newUser.getRole());
+            }
+
+            return "ERROR";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "ERROR";
         }
+    }
 
-        User user = dao.login(email, password);
-
-        if (user != null) {
-            return user.getRole().toUpperCase();
-        }
-
-        User existingUser = dao.findByEmail(email);
-
-        if (existingUser != null) {
+    private String normalizeRole(String role) {
+        if (role == null) {
             return "ERROR";
         }
 
-        boolean created = dao.createClientUser(email, password);
+        role = role.toUpperCase();
 
-        if (!created) {
-            return "ERROR";
+        if ("CLIENTE".equals(role)) {
+            return "CLIENT";
         }
 
-        User newUser = dao.login(email, password);
-
-        if (newUser != null) {
-            return newUser.getRole().toUpperCase();
+        if ("ADMIN".equals(role) || "CLIENT".equals(role)) {
+            return role;
         }
 
         return "ERROR";

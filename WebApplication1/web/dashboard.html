@@ -23,9 +23,11 @@
 
   <aside class="w-72 h-screen bg-[#f6f3f2] flex flex-col p-6">
     <h2 class="text-2xl font-headline text-red-700 font-bold mb-6">Gestión de Espacios</h2>
+
     <nav class="flex flex-col gap-3 text-sm">
       <a class="text-red-700 font-bold">Reservaciones</a>
     </nav>
+
     <div class="mt-auto">
       <a href="logout" class="text-red-700 font-bold">Cerrar sesión</a>
     </div>
@@ -50,43 +52,83 @@
         </div>
 
         <div class="calendar-grid font-bold mb-2 text-center text-sm text-gray-600">
-          <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div>
-          <div>Jue</div><div>Vie</div><div>Sáb</div>
+          <div>Dom</div>
+          <div>Lun</div>
+          <div>Mar</div>
+          <div>Mié</div>
+          <div>Jue</div>
+          <div>Vie</div>
+          <div>Sáb</div>
         </div>
 
         <div id="calendario" class="calendar-grid"></div>
       </div>
 
       <div class="lg:col-span-4 bg-white p-6 rounded-xl shadow">
+
         <form id="reservaForm" action="ReservationServlet" method="POST" onsubmit="return validarYEnviar(event)">
           <input type="hidden" name="date" id="fecha">
 
           <label class="block text-sm font-bold mb-1 text-gray-700">Hora inicio</label>
-          <input type="time" name="start_time" id="start_time" class="w-full border p-3 mb-3 rounded" required>
+          <input type="time" name="start_time" id="start_time"
+                 class="w-full border p-3 mb-3 rounded" required>
 
           <label class="block text-sm font-bold mb-1 text-gray-700">Hora fin</label>
-          <input type="time" name="end_time" id="end_time" class="w-full border p-3 mb-3 rounded" required>
+          <input type="time" name="end_time" id="end_time"
+                 class="w-full border p-3 mb-3 rounded" required>
 
           <label class="block text-sm font-bold mb-1 text-gray-700">Cantidad de asistentes</label>
-          <input type="number" name="quantity" id="quantity" class="w-full border p-3 mb-3 rounded" required min="1" max="200">
+          <input type="number" name="quantity" id="quantity"
+                 class="w-full border p-3 mb-3 rounded" required min="1" max="200">
 
-          <label class="block text-sm font-bold mb-1 text-gray-700 mt-4">Equipamiento audiovisual</label>
-          <select name="equipment" id="equipment" class="w-full border p-3 mb-2 rounded">
-            <option value="NINGUNO">Ninguno</option>
-            <option value="1">Proyector (2 disponibles)</option>
-            <option value="2">Micrófono (5 disponibles)</option>
-            <option value="3">Sistema de sonido (3 disponibles)</option>
-          </select>
+          <label class="block text-sm font-bold mb-2 text-gray-700 mt-4">Equipamiento audiovisual</label>
 
-          <input type="number" name="eqQty" id="eqQty" class="w-full border p-3 mb-3 rounded" value="1" min="1" max="5">
+          <div class="space-y-3 mb-4">
 
-          <button type="submit" id="btnReservar" class="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 transition">
+            <div class="border rounded p-3 bg-gray-50">
+              <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
+                <input type="checkbox" name="equipment" value="1" class="equipment-check">
+                Proyector
+                <span class="text-gray-500 font-normal">(2 disponibles)</span>
+              </label>
+              <input type="number" name="eqQty_1" id="eqQty_1"
+                     class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
+                     value="0" min="0" max="2" disabled>
+            </div>
+
+            <div class="border rounded p-3 bg-gray-50">
+              <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
+                <input type="checkbox" name="equipment" value="2" class="equipment-check">
+                Micrófono
+                <span class="text-gray-500 font-normal">(5 disponibles)</span>
+              </label>
+              <input type="number" name="eqQty_2" id="eqQty_2"
+                     class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
+                     value="0" min="0" max="5" disabled>
+            </div>
+
+            <div class="border rounded p-3 bg-gray-50">
+              <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
+                <input type="checkbox" name="equipment" value="3" class="equipment-check">
+                Sistema de sonido
+                <span class="text-gray-500 font-normal">(3 disponibles)</span>
+              </label>
+              <input type="number" name="eqQty_3" id="eqQty_3"
+                     class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
+                     value="0" min="0" max="3" disabled>
+            </div>
+
+          </div>
+
+          <button type="submit" id="btnReservar"
+                  class="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 transition">
             Reservar
           </button>
 
           <p id="errorFecha" class="text-red-600 text-sm mt-2 hidden">⚠️ Seleccione una fecha válida</p>
           <p id="loading" class="text-gray-500 text-sm mt-2 hidden">⏳ Procesando reserva...</p>
         </form>
+
       </div>
 
     </div>
@@ -112,6 +154,30 @@
     const btnReservar = document.getElementById("btnReservar");
     const loading = document.getElementById("loading");
 
+    const equipmentMax = {
+      "1": 2,
+      "2": 5,
+      "3": 3
+    };
+
+    document.querySelectorAll(".equipment-check").forEach(check => {
+      check.addEventListener("change", function () {
+        const id = this.value;
+        const qtyInput = document.getElementById("eqQty_" + id);
+
+        if (this.checked) {
+          qtyInput.disabled = false;
+          qtyInput.value = 1;
+          qtyInput.min = 1;
+          qtyInput.classList.remove("bg-gray-100");
+        } else {
+          qtyInput.value = 0;
+          qtyInput.disabled = true;
+          qtyInput.classList.add("bg-gray-100");
+        }
+      });
+    });
+
     fetch("currentUser")
       .then(r => r.text())
       .then(u => {
@@ -127,6 +193,7 @@
 
     const params = new URLSearchParams(window.location.search);
     const msg = params.get("msg");
+
     const errorMsg = {
       "ok": "✅ Reserva creada exitosamente",
       "busy": "⚠️ Horario ya ocupado",
@@ -160,6 +227,7 @@
       hoy.setHours(0, 0, 0, 0);
 
       const fechaSeleccionada = new Date(fecha.value + "T00:00:00");
+
       if (fechaSeleccionada < hoy) {
         mensaje.innerHTML = "<span class='text-red-600'>❌ No se permiten fechas pasadas</span>";
         return false;
@@ -167,15 +235,32 @@
 
       const start = document.getElementById("start_time").value;
       const end = document.getElementById("end_time").value;
+
       if (start >= end) {
         mensaje.innerHTML = "<span class='text-red-600'>❌ Hora de inicio debe ser menor que hora fin</span>";
         return false;
       }
 
       const qty = parseInt(document.getElementById("quantity").value);
+
       if (qty <= 0 || qty > 200) {
         mensaje.innerHTML = "<span class='text-red-600'>❌ Cantidad debe estar entre 1 y 200</span>";
         return false;
+      }
+
+      const selectedEquipments = document.querySelectorAll(".equipment-check:checked");
+
+      for (const check of selectedEquipments) {
+        const id = check.value;
+        const qtyInput = document.getElementById("eqQty_" + id);
+        const qtyEq = parseInt(qtyInput.value || "0");
+        const maxEq = equipmentMax[id];
+
+        if (qtyEq < 1 || qtyEq > maxEq) {
+          mensaje.innerHTML =
+            `<span class='text-red-600'>❌ Cantidad inválida para equipo. Máximo permitido: ${maxEq}</span>`;
+          return false;
+        }
       }
 
       btnReservar.disabled = true;
@@ -211,6 +296,7 @@
       for (let d = 1; d <= totalDays; d++) {
         const fechaDia = new Date(anio, mes, d);
         fechaDia.setHours(0, 0, 0, 0);
+
         const esPasada = fechaDia < hoy;
 
         calendario.innerHTML += `
@@ -238,14 +324,17 @@
 
     function cambiarMes(delta) {
       mes += delta;
+
       if (mes < 0) {
         mes = 11;
         anio--;
       }
+
       if (mes > 11) {
         mes = 0;
         anio++;
       }
+
       generarCalendario();
     }
 

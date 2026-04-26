@@ -15,10 +15,11 @@ public class CurrentUserServlet extends HttpServlet {
 
         HttpSession session = req.getSession(false);
 
-        if (session != null && session.getAttribute("emailUsuario") != null) {
-            resp.getWriter().write(session.getAttribute("emailUsuario").toString());
-        } else {
+        if (session == null || session.getAttribute("emailUsuario") == null) {
             resp.getWriter().write("NO_SESSION");
+            return;
         }
+
+        resp.getWriter().write(session.getAttribute("emailUsuario").toString());
     }
 }

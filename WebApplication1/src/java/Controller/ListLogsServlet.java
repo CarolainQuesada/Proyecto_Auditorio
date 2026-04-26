@@ -23,13 +23,13 @@ public class ListLogsServlet extends HttpServlet {
             return;
         }
 
-        String role = (String) session.getAttribute("role");
-        if (!"ADMIN".equals(role)) {
-            resp.setStatus(403);
-            resp.getWriter().write("forbidden");
-            return;
-        }
+    String role = (String) session.getAttribute("role");
 
+    if (!"ADMIN".equalsIgnoreCase(role)) {
+    resp.setStatus(403);
+    resp.getWriter().write("forbidden");
+    return;
+    }
         try {
             LogDAO dao = new LogDAO();
             List<Log> logs = dao.getAll();

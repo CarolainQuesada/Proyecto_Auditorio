@@ -1,13 +1,13 @@
 package Controller;
 
-import java.io.*;
-import javax.servlet.*;
+import java.io.IOException;
 import javax.servlet.http.*;
 import javax.servlet.annotation.WebServlet;
 
 @WebServlet("/logout")
 public class LogoutServlet extends HttpServlet {
 
+    @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
 

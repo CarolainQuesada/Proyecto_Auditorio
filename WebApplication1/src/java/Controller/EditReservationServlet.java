@@ -18,14 +18,17 @@ public class EditReservationServlet extends HttpServlet {
 
         HttpSession session = request.getSession(false);
 
-        if (session == null || session.getAttribute("emailUsuario") == null || session.getAttribute("role") == null) {
+        if (session == null
+                || session.getAttribute("emailUsuario") == null
+                || session.getAttribute("role") == null) {
+
             response.sendRedirect("index.html");
             return;
         }
 
-        String role = (String) session.getAttribute("role");
+        String role = session.getAttribute("role").toString();
 
-        if (!"ADMIN".equals(role)) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
             response.sendRedirect("dashboard.html?msg=unauthorized");
             return;
         }
@@ -44,7 +47,30 @@ public class EditReservationServlet extends HttpServlet {
                     || endTime == null || endTime.trim().isEmpty()
                     || quantity == null || quantity.trim().isEmpty()
                     || status == null || status.trim().isEmpty()) {
+
                 response.sendRedirect("admin.html?msg=error");
+                return;
+            }
+
+            id = id.trim();
+            date = date.trim();
+            startTime = startTime.trim();
+            endTime = endTime.trim();
+            quantity = quantity.trim();
+            status = status.trim().toUpperCase();
+
+            if (!"PENDING".equals(status)
+                    && !"CONFIRMED".equals(status)
+                    && !"EXPIRED".equals(status)) {
+
+                response.sendRedirect("admin.html?msg=error");
+                return;
+            }
+
+            int qty = Integer.parseInt(quantity);
+
+            if (qty <= 0 || qty > 200) {
+                response.sendRedirect("admin.html?msg=quantity");
                 return;
             }
 
@@ -56,32 +82,52 @@ public class EditReservationServlet extends HttpServlet {
                 return;
             }
 
+            if (startTime.compareTo(endTime) >= 0) {
+                response.sendRedirect("admin.html?msg=hour");
+                return;
+            }
+
             try (
                 Socket socket = new Socket("localhost", 5000);
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
             ) {
-                String command = "EDIT;" + id + ";" + date + ";" + startTime + ";" + endTime + ";" + quantity + ";" + status;
+                String command = "EDIT;"
+                        + id + ";"
+                        + date + ";"
+                        + startTime + ";"
+                        + endTime + ";"
+                        + quantity + ";"
+                        + status;
 
                 out.println(command);
+
                 String responseServer = in.readLine();
 
                 if (responseServer == null) {
                     response.sendRedirect("admin.html?msg=server");
-                } else if (responseServer.contains("updated")) {
+                    return;
+                }
+
+                String result = responseServer.trim().toLowerCase();
+
+                if (result.contains("updated")) {
                     response.sendRedirect("admin.html?msg=ok");
-                } else if (responseServer.contains("hour")) {
+                } else if (result.contains("hour")) {
                     response.sendRedirect("admin.html?msg=hour");
-                } else if (responseServer.contains("quantity")) {
+                } else if (result.contains("quantity")) {
                     response.sendRedirect("admin.html?msg=quantity");
-                } else if (responseServer.contains("busy")) {
+                } else if (result.contains("busy_time") || result.contains("busy")) {
                     response.sendRedirect("admin.html?msg=busy");
-                } else if (responseServer.contains("past")) {
+                } else if (result.contains("past")) {
                     response.sendRedirect("admin.html?msg=past");
                 } else {
                     response.sendRedirect("admin.html?msg=error");
                 }
             }
+
+        } catch (NumberFormatException e) {
+            response.sendRedirect("admin.html?msg=quantity");
 
         } catch (Exception e) {
             e.printStackTrace();

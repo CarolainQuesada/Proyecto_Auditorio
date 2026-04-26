@@ -10,21 +10,29 @@ import java.util.List;
 public class ReservationEquipmentDAO {
 
     public boolean create(Connection con, ReservationEquipment re) {
-        String sql = "INSERT INTO reservation_equipment (reservation_id, equipment_id, quantity) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO reservation_equipment "
+                + "(reservation_id, equipment_id, quantity) "
+                + "VALUES (?, ?, ?)";
+
         try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
+
             ps.setInt(1, re.getReservationId());
             ps.setInt(2, re.getEquipmentId());
             ps.setInt(3, re.getQuantity());
-            
+
             int rows = ps.executeUpdate();
+
             if (rows > 0) {
-                ResultSet rs = ps.getGeneratedKeys();
-                if (rs.next()) re.setId(rs.getInt(1));
-                rs.close();
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        re.setId(rs.getInt(1));
+                    }
+                }
                 return true;
             }
+
             return false;
+
         } catch (SQLException e) {
             System.err.println("[DAO ERROR] ReservationEquipment create: " + e.getMessage());
             e.printStackTrace();
@@ -32,42 +40,123 @@ public class ReservationEquipmentDAO {
         }
     }
 
-    public List<ReservationEquipment> getByReservationId(int reservationId) {
-        List<ReservationEquipment> list = new ArrayList<>();
-        String sql = "SELECT * FROM reservation_equipment WHERE reservation_id = ?";
+    public boolean addEquipment(int reservationId, int equipmentId, int quantity) {
+        String sql = "INSERT INTO reservation_equipment "
+                + "(reservation_id, equipment_id, quantity) "
+                + "VALUES (?, ?, ?)";
+
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-            
+
             ps.setInt(1, reservationId);
+            ps.setInt(2, equipmentId);
+            ps.setInt(3, quantity);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] addEquipment: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean exists(int reservationId, int equipmentId) {
+        String sql = "SELECT COUNT(*) FROM reservation_equipment "
+                + "WHERE reservation_id = ? AND equipment_id = ?";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, reservationId);
+            ps.setInt(2, equipmentId);
+
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(map(rs));
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] exists: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public boolean addOrUpdate(int reservationId, int equipmentId, int quantity) {
+        if (exists(reservationId, equipmentId)) {
+            return updateQuantity(reservationId, equipmentId, quantity);
+        }
+
+        return addEquipment(reservationId, equipmentId, quantity);
+    }
+
+    public List<ReservationEquipment> getByReservationId(int reservationId) {
+        List<ReservationEquipment> list = new ArrayList<>();
+
+        String sql = "SELECT * FROM reservation_equipment WHERE reservation_id = ?";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, reservationId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(map(rs));
+                }
+            }
+
         } catch (SQLException e) {
             System.err.println("[DAO ERROR] getByReservationId: " + e.getMessage());
         }
+
         return list;
     }
 
     public boolean deleteByReservationId(int reservationId) {
         String sql = "DELETE FROM reservation_equipment WHERE reservation_id = ?";
+
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setInt(1, reservationId);
             ps.executeUpdate();
             return true;
+
         } catch (SQLException e) {
             System.err.println("[DAO ERROR] deleteByReservationId: " + e.getMessage());
             return false;
         }
     }
 
+    public boolean deleteByReservationId(Connection con, int reservationId) {
+        String sql = "DELETE FROM reservation_equipment WHERE reservation_id = ?";
+
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, reservationId);
+            ps.executeUpdate();
+            return true;
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] deleteByReservationId con transacción: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean delete(int reservationId, int equipmentId) {
-        String sql = "DELETE FROM reservation_equipment WHERE reservation_id = ? AND equipment_id = ?";
+        String sql = "DELETE FROM reservation_equipment "
+                + "WHERE reservation_id = ? AND equipment_id = ?";
+
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setInt(1, reservationId);
             ps.setInt(2, equipmentId);
+
             return ps.executeUpdate() > 0;
+
         } catch (SQLException e) {
             System.err.println("[DAO ERROR] delete: " + e.getMessage());
             return false;
@@ -75,13 +164,19 @@ public class ReservationEquipmentDAO {
     }
 
     public boolean updateQuantity(int reservationId, int equipmentId, int quantity) {
-        String sql = "UPDATE reservation_equipment SET quantity = ? WHERE reservation_id = ? AND equipment_id = ?";
+        String sql = "UPDATE reservation_equipment "
+                + "SET quantity = ? "
+                + "WHERE reservation_id = ? AND equipment_id = ?";
+
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setInt(1, quantity);
             ps.setInt(2, reservationId);
             ps.setInt(3, equipmentId);
+
             return ps.executeUpdate() > 0;
+
         } catch (SQLException e) {
             System.err.println("[DAO ERROR] updateQuantity: " + e.getMessage());
             return false;
@@ -90,10 +185,12 @@ public class ReservationEquipmentDAO {
 
     private ReservationEquipment map(ResultSet rs) throws SQLException {
         ReservationEquipment re = new ReservationEquipment();
+
         re.setId(rs.getInt("id"));
         re.setReservationId(rs.getInt("reservation_id"));
         re.setEquipmentId(rs.getInt("equipment_id"));
         re.setQuantity(rs.getInt("quantity"));
+
         return re;
     }
 }

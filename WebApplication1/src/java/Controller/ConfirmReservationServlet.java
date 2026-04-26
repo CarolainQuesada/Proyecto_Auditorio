@@ -24,10 +24,14 @@ public class ConfirmReservationServlet extends HttpServlet {
             return;
         }
 
-        String role = (String) session.getAttribute("role");
+    String role = session.getAttribute("role").toString();
 
-        if (!"ADMIN".equals(role)) {
-            resp.sendRedirect("dashboard.html?msg=unauthorized");
+    if (!"ADMIN".equalsIgnoreCase(role)) {
+        resp.sendRedirect("dashboard.html?msg=unauthorized");
+    return;
+ }
+        if (id == null || id.trim().isEmpty()) {
+            resp.sendRedirect("admin.html?msg=error");
             return;
         }
 
@@ -36,12 +40,21 @@ public class ConfirmReservationServlet extends HttpServlet {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
         ) {
-            out.println("CONFIRM;" + id);
+            out.println("CONFIRM;" + id.trim());
 
             String responseServer = in.readLine();
 
-            if (responseServer != null && responseServer.toLowerCase().contains("confirm")) {
+            if (responseServer == null) {
+                resp.sendRedirect("admin.html?msg=server");
+                return;
+            }
+
+            String result = responseServer.trim().toLowerCase();
+
+            if (result.contains("confirmed")) {
                 resp.sendRedirect("admin.html?msg=confirmed");
+            } else if (result.contains("expired")) {
+                resp.sendRedirect("admin.html?msg=expired");
             } else {
                 resp.sendRedirect("admin.html?msg=error");
             }

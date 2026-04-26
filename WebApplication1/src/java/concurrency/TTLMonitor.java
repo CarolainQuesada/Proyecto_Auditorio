@@ -5,8 +5,8 @@ import socket.ServerGUI;
 
 public class TTLMonitor extends Thread {
 
-    private ServerGUI gui;
-    private static final int TTL_MINUTES = 1;
+    private final ServerGUI gui;
+    private static final int TTL_MINUTES = 10;
 
     public TTLMonitor(ServerGUI gui) {
         this.gui = gui;
@@ -17,12 +17,26 @@ public class TTLMonitor extends Thread {
 
         while (true) {
             try {
+                gui.log("TTL running... Expiración configurada: " + TTL_MINUTES + " minutos");
 
-                gui.log("TTL running...");
+                int expired = new ReservationDAO().cleanExpired(TTL_MINUTES);
 
-                new ReservationDAO().cleanExpired(TTL_MINUTES);
+                if (expired > 0) {
+                    gui.log("TTL expired reservations: " + expired);
+
+                    SystemLog.getInstance().log(
+                            "SYSTEM",
+                            "TTL_EXPIRED",
+                            "Reservas expiradas automáticamente: " + expired
+                    );
+                }
 
                 Thread.sleep(60000);
+
+            } catch (InterruptedException e) {
+                gui.log("TTL detenido");
+                Thread.currentThread().interrupt();
+                break;
 
             } catch (Exception e) {
                 gui.log("TTL error: " + e.getMessage());

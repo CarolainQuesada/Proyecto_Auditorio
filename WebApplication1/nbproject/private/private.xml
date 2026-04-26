@@ -3,31 +3,26 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/ListReservationsServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/RoleServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/DeleteReservationServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/util/SocketClient.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/web/admin.html</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/ReservationServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/dao/LogDAO.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/LogoutServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/concurrency/TTLMonitor.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/ConfirmReservationServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/web/META-INF/web.xml</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/concurrency/SystemLog.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/concurrency/CalendarLock.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/socket/ClientHandler.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/concurrency/EquipmentControl.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/EditReservationServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/web/index.html</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/web/dashboard.html</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/concurrency/CapacityControl.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/service/ReservationService.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/LoginServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/CurrentUserServlet.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/util/DBConnection.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/socket/ServerGUI.java</file>
-            <file>file:/C:/programacion/Proyecto_Auditorio/WebApplication1/src/java/Controller/ListLogsServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/web/dashboard.html</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/ReservationServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/service/ReservationService.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/web/admin.html</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/ConfirmReservationServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/CurrentUserServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/DeleteReservationServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/EditReservationServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/ListLogsServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/ListReservationsServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/LoginServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/LogoutServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/RoleServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/Controller/AdminEquipmentServlet.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/model/ReservationEquipment.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/dao/ReservationEquipmentDAO.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/socket/ClientHandler.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/socket/ServerGUI.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/concurrency/TTLMonitor.java</file>
+            <file>file:/C:/so_2026/Proyecto_Auditorio/WebApplication1/src/java/dao/ReservationDAO.java</file>
         </group>
     </open-files>
 </project-private>

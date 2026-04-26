@@ -15,7 +15,6 @@ public class DeleteReservationServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws IOException {
 
-        String id = req.getParameter("id");
         resp.setContentType("text/plain;charset=UTF-8");
 
         HttpSession session = req.getSession(false);
@@ -26,11 +25,19 @@ public class DeleteReservationServlet extends HttpServlet {
             return;
         }
 
-        String role = (String) session.getAttribute("role");
+        String role = session.getAttribute("role").toString();
 
-        if (!"ADMIN".equals(role)) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
             resp.setStatus(403);
             resp.getWriter().write("forbidden");
+            return;
+        }
+
+        String id = req.getParameter("id");
+
+        if (id == null || id.trim().isEmpty()) {
+            resp.setStatus(400);
+            resp.getWriter().write("error");
             return;
         }
 
@@ -39,10 +46,11 @@ public class DeleteReservationServlet extends HttpServlet {
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
         ) {
-            out.println("DELETE;" + id);
+            out.println("DELETE;" + id.trim());
+
             String responseServer = in.readLine();
 
-            if (responseServer != null && !responseServer.toLowerCase().contains("error")) {
+            if (responseServer != null && responseServer.trim().equalsIgnoreCase("deleted")) {
                 resp.getWriter().write("ok");
             } else {
                 resp.setStatus(500);

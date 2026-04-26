@@ -6,6 +6,8 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @WebServlet("/ReservationServlet")
 public class ReservationServlet extends HttpServlet {
@@ -27,20 +29,13 @@ public class ReservationServlet extends HttpServlet {
         String start = request.getParameter("start_time");
         String end = request.getParameter("end_time");
         String quantity = request.getParameter("quantity");
-        
-        String[] equipmentIds = request.getParameterValues("equipment"); 
-        String[] equipmentQtys = request.getParameterValues("eqQty");    
-        
-        String equipmentStr = (equipmentIds != null && equipmentIds.length > 0) 
-                              ? String.join(",", equipmentIds) : "";
-        String eqQtyStr = (equipmentQtys != null && equipmentQtys.length > 0) 
-                          ? String.join(",", equipmentQtys) : "";
 
         try {
             if (date == null || date.trim().isEmpty()
                     || start == null || start.trim().isEmpty()
                     || end == null || end.trim().isEmpty()
                     || quantity == null || quantity.trim().isEmpty()) {
+
                 response.sendRedirect("dashboard.html?msg=error");
                 return;
             }
@@ -53,14 +48,75 @@ public class ReservationServlet extends HttpServlet {
                 return;
             }
 
+            if (start.compareTo(end) >= 0) {
+                response.sendRedirect("dashboard.html?msg=hour");
+                return;
+            }
+
+            int qty = Integer.parseInt(quantity);
+
+            if (qty <= 0 || qty > 200) {
+                response.sendRedirect("dashboard.html?msg=quantity");
+                return;
+            }
+
         } catch (Exception e) {
             response.sendRedirect("dashboard.html?msg=error");
             return;
         }
 
+        String[] selectedEquipments = request.getParameterValues("equipment");
+
+        List<String> equipmentIds = new ArrayList<>();
+        List<String> equipmentQtys = new ArrayList<>();
+
+        if (selectedEquipments != null) {
+            for (String equipmentIdStr : selectedEquipments) {
+                try {
+                    int equipmentId = Integer.parseInt(equipmentIdStr);
+                    int maxAllowed = getEquipmentMax(equipmentId);
+
+                    if (maxAllowed == 0) {
+                        response.sendRedirect("dashboard.html?msg=busy_equipment");
+                        return;
+                    }
+
+                    String qtyParam = request.getParameter("eqQty_" + equipmentId);
+
+                    if (qtyParam == null || qtyParam.trim().isEmpty()) {
+                        response.sendRedirect("dashboard.html?msg=busy_equipment");
+                        return;
+                    }
+
+                    int equipmentQuantity = Integer.parseInt(qtyParam.trim());
+
+                    if (equipmentQuantity <= 0 || equipmentQuantity > maxAllowed) {
+                        response.sendRedirect("dashboard.html?msg=busy_equipment");
+                        return;
+                    }
+
+                    equipmentIds.add(String.valueOf(equipmentId));
+                    equipmentQtys.add(String.valueOf(equipmentQuantity));
+
+                } catch (NumberFormatException e) {
+                    response.sendRedirect("dashboard.html?msg=busy_equipment");
+                    return;
+                }
+            }
+        }
+
+        String equipmentStr = String.join(",", equipmentIds);
+        String eqQtyStr = String.join(",", equipmentQtys);
+
         String command = String.format(
                 "RESERVE;%s;%s;%s;%s;%s;%s;%s",
-                user, date, start, end, quantity, equipmentStr, eqQtyStr
+                user,
+                date,
+                start,
+                end,
+                quantity,
+                equipmentStr,
+                eqQtyStr
         );
 
         System.out.println("[Servlet] Enviando: " + command);
@@ -76,15 +132,38 @@ public class ReservationServlet extends HttpServlet {
 
         if (resultado.equals("created")) {
             response.sendRedirect("dashboard.html?msg=ok");
-        } else {
-            String msg = "error";
-            if (resultado.equals("busy_time")) msg = "busy";
-            if (resultado.equals("busy_capacity")) msg = "busy_capacity";
-            if (resultado.equals("busy_equipment")) msg = "busy_equipment";
-            if (resultado.equals("hour")) msg = "hour";
-            if (resultado.equals("past")) msg = "past";
+            return;
+        }
 
-            response.sendRedirect("dashboard.html?msg=" + msg);
+        String msg = "error";
+
+        if (resultado.equals("busy_time")) {
+            msg = "busy";
+        } else if (resultado.equals("busy_capacity")) {
+            msg = "busy_capacity";
+        } else if (resultado.equals("busy_equipment")) {
+            msg = "busy_equipment";
+        } else if (resultado.equals("hour")) {
+            msg = "hour";
+        } else if (resultado.equals("quantity")) {
+            msg = "quantity";
+        } else if (resultado.equals("past")) {
+            msg = "past";
+        }
+
+        response.sendRedirect("dashboard.html?msg=" + msg);
+    }
+
+    private int getEquipmentMax(int equipmentId) {
+        switch (equipmentId) {
+            case 1:
+                return 2; // Proyector
+            case 2:
+                return 5; // Micrófono
+            case 3:
+                return 3; // Sistema de sonido
+            default:
+                return 0;
         }
     }
 }

@@ -6,9 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.*;
 
 @WebServlet("/listReservations")
 public class ListReservationsServlet extends HttpServlet {
@@ -18,6 +16,22 @@ public class ListReservationsServlet extends HttpServlet {
             throws IOException {
 
         resp.setContentType("text/plain;charset=UTF-8");
+
+        HttpSession session = req.getSession(false);
+
+        if (session == null || session.getAttribute("role") == null) {
+            resp.setStatus(401);
+            resp.getWriter().write("ERROR: unauthorized");
+            return;
+        }
+
+        String role = session.getAttribute("role").toString();
+
+        if (!"ADMIN".equals(role)) {
+            resp.setStatus(403);
+            resp.getWriter().write("ERROR: forbidden");
+            return;
+        }
 
         try (
             Socket socket = new Socket("localhost", 5000);
@@ -36,7 +50,8 @@ public class ListReservationsServlet extends HttpServlet {
 
         } catch (Exception e) {
             e.printStackTrace();
-            resp.getWriter().write("");
+            resp.setStatus(500);
+            resp.getWriter().write("ERROR: server");
         }
     }
 }

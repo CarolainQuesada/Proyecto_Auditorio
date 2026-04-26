@@ -15,16 +15,20 @@ public class ServerGUI extends JFrame {
 
     private final JTextArea logArea;
     private ServerSocket server;
-    private boolean running = false;
+    private volatile boolean running = false;
+
     private final ReservationService reservationService;
+    private TTLMonitor ttlMonitor;
+
     private static final List<String> clients = new ArrayList<>();
 
     public ServerGUI() {
         System.out.println("📊 Capacidad inicial: " + CapacityControl.availablePermits() + " / 200");
 
         this.reservationService = new ReservationService();
+
         setTitle("Reservation Server");
-        setSize(500, 400);
+        setSize(650, 450);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -56,22 +60,25 @@ public class ServerGUI extends JFrame {
             return;
         }
 
-        new Thread(() -> {
+        Thread serverThread = new Thread(() -> {
             try {
                 server = new ServerSocket(5000);
                 running = true;
 
                 log("Server started on port 5000");
+                log("Capacity available: " + CapacityControl.availablePermits() + " / 200");
 
-                new TTLMonitor(this).start();
+                startTTLMonitor();
 
                 while (running) {
                     try {
                         Socket client = server.accept();
                         String ip = client.getInetAddress().getHostAddress();
+
                         log("New incoming connection from: " + ip);
 
-                        new ClientHandler(client, reservationService, this).start();
+                        ClientHandler handler = new ClientHandler(client, reservationService, this);
+                        handler.start();
 
                     } catch (Exception e) {
                         if (running) {
@@ -83,13 +90,38 @@ public class ServerGUI extends JFrame {
             } catch (Exception e) {
                 log("Server error: " + e.getMessage());
                 e.printStackTrace();
+
+            } finally {
+                running = false;
+                log("Server thread finished");
             }
-        }).start();
+        });
+
+        serverThread.setDaemon(true);
+        serverThread.start();
+    }
+
+    private void startTTLMonitor() {
+        if (ttlMonitor != null && ttlMonitor.isAlive()) {
+            log("TTLMonitor is already running");
+            return;
+        }
+
+        ttlMonitor = new TTLMonitor(this);
+        ttlMonitor.setDaemon(true);
+        ttlMonitor.start();
+
+        log("TTLMonitor started");
     }
 
     private void stopServer() {
         try {
             running = false;
+
+            if (ttlMonitor != null && ttlMonitor.isAlive()) {
+                ttlMonitor.interrupt();
+                log("TTLMonitor stopped");
+            }
 
             if (server != null && !server.isClosed()) {
                 server.close();
@@ -107,6 +139,7 @@ public class ServerGUI extends JFrame {
         if (!clients.contains(user)) {
             clients.add(user);
         }
+
         log("Client connected: " + user);
     }
 
@@ -116,7 +149,10 @@ public class ServerGUI extends JFrame {
     }
 
     public void log(String message) {
-        SwingUtilities.invokeLater(() -> logArea.append(message + "\n"));
+        SwingUtilities.invokeLater(() -> {
+            logArea.append(message + "\n");
+            logArea.setCaretPosition(logArea.getDocument().getLength());
+        });
     }
 
     public static void main(String[] args) {
