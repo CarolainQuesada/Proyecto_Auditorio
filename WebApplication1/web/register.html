@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Login UNA</title>
+<title>Registro UNA</title>
 
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
@@ -15,7 +15,7 @@
  * Tailwind CSS custom configuration.
  *
  * <p>Defines the institutional color palette and font families used by the
- * login page. The primary color represents the UNA visual identity.
+ * registration page. The primary colors follow the UNA visual identity.
  */
 tailwind.config = {
   theme: {
@@ -44,21 +44,20 @@ h1 { font-family: 'Newsreader', serif; }
 <body class="bg-white min-h-screen flex flex-col">
 
 <!--
-  Login Page
+  Registration Page
 
-  This page is the main access point of the auditorium reservation system.
-  It allows registered users to authenticate using their institutional email
-  and password.
+  This page allows new institutional users to create an account in the
+  auditorium reservation system.
 
   Main features:
-  - Receives email and password credentials.
-  - Sends login data to the /login servlet using POST.
-  - Displays authentication error messages returned by the backend.
-  - Displays a success message after successful registration.
-  - Provides access to register.html for users who do not have an account.
+  - Receives institutional email, password and password confirmation.
+  - Sends registration data to the /register servlet using POST.
+  - Validates registration results returned by the backend.
+  - Displays user-friendly error messages.
+  - Provides a link back to the login page for users who already have an account.
 
   Backend endpoint used:
-  - /login
+  - /register
 -->
 
 <main class="flex-grow flex items-center justify-center px-4 py-12">
@@ -69,13 +68,13 @@ h1 { font-family: 'Newsreader', serif; }
 
 <div class="text-center mb-10">
 <h1 class="text-4xl font-bold text-primary">UNA</h1>
-<p class="text-gray-600 mt-2">Identificación Institucional</p>
+<p class="text-gray-600 mt-2">Registro Institucional</p>
 </div>
 
-<form action="login" method="POST" class="space-y-6">
+<form action="register" method="POST" class="space-y-6">
 
 <div id="errorBox" class="hidden bg-red-100 text-red-700 p-3 rounded text-sm text-center">
-Error en el login
+Error en el registro
 </div>
 
 <div>
@@ -112,10 +111,31 @@ lock
 <input 
 name="password"
 type="password"
-placeholder="••••••••"
+placeholder="Mínimo 3 caracteres"
 class="w-full pl-10 pr-4 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
 required
-autocomplete="current-password"
+autocomplete="new-password"
+/>
+</div>
+</div>
+
+<div>
+<label class="text-xs font-bold uppercase tracking-widest text-gray-500">
+Confirmar contraseña
+</label>
+
+<div class="relative mt-2">
+<span class="material-symbols-outlined absolute left-3 top-3 text-gray-400">
+lock
+</span>
+
+<input 
+name="confirmPassword"
+type="password"
+placeholder="Repita la contraseña"
+class="w-full pl-10 pr-4 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
+required
+autocomplete="new-password"
 />
 </div>
 </div>
@@ -124,18 +144,12 @@ autocomplete="current-password"
 type="submit"
 class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded shadow-md hover:shadow-lg transition-all uppercase tracking-widest text-sm"
 >
-Ingresar
+Crear cuenta
 </button>
 
-<div class="text-center pt-2">
-  <p class="text-sm text-gray-600">
-    ¿No tienes cuenta?
-  </p>
-
-  <a href="register.html"
-     class="inline-block mt-2 border border-primary text-primary hover:bg-red-50 font-bold px-4 py-2 rounded transition">
-    Crear cuenta nueva
-  </a>
+<div class="text-center text-sm text-gray-600">
+¿Ya tienes cuenta?
+<a href="index.html" class="text-primary font-bold hover:underline">Inicia sesión</a>
 </div>
 
 </form>
@@ -151,36 +165,35 @@ Ingresar
 
 <script>
 /**
- * @fileoverview Login page message handler.
+ * @fileoverview Registration page message handler.
  *
- * <p>This script reads query parameters returned by the backend after login
- * or registration attempts. It displays user-friendly messages and removes
- * the query string from the URL after processing it.
+ * <p>This script reads query parameters returned by the backend after a
+ * registration attempt. According to the received error code, it displays a
+ * user-friendly message and then removes the query string from the URL.
  */
 
 /**
  * Query parameters received in the current page URL.
  *
- * <p>These parameters are used to detect authentication errors or successful
- * registration events.
+ * <p>These parameters are used to detect validation errors returned by the
+ * registration servlet.
  *
  * @type {URLSearchParams}
  */
 const params = new URLSearchParams(window.location.search);
 
 /**
- * DOM element used to display login errors or registration success messages.
+ * DOM element used to display registration error messages.
  *
  * @type {HTMLElement}
  */
 const errorBox = document.getElementById("errorBox");
 
 /**
- * Displays an error message in the login page.
+ * Displays an error message in the registration page.
  *
- * <p>The message box is styled with red colors to indicate that the operation
- * failed. This function is used for invalid email, invalid login, unregistered
- * users and server errors.
+ * <p>The message box becomes visible when the backend returns an error code
+ * such as invalid email, password mismatch, existing account or server error.
  *
  * @param {string} msg message to display to the user
  * @returns {void}
@@ -188,66 +201,56 @@ const errorBox = document.getElementById("errorBox");
 function mostrarError(msg){
   errorBox.innerText = msg;
   errorBox.classList.remove("hidden");
-  errorBox.classList.remove("bg-green-100", "text-green-700");
-  errorBox.classList.add("bg-red-100", "text-red-700");
 }
 
 /**
- * Displays a success message in the login page.
- *
- * <p>The message box is styled with green colors to indicate that the account
- * was created successfully and the user may now log in.
- *
- * @param {string} msg message to display to the user
- * @returns {void}
- */
-function mostrarExito(msg){
-  errorBox.innerText = msg;
-  errorBox.classList.remove("hidden");
-  errorBox.classList.remove("bg-red-100", "text-red-700");
-  errorBox.classList.add("bg-green-100", "text-green-700");
-}
-
-/**
- * Displays an error when the submitted email is empty or does not belong to
- * the institutional domain.
+ * Displays an error when the email is empty or does not belong to the
+ * institutional domain @una.ac.cr.
  */
 if (params.get("error") === "email") {
-  mostrarError("Solo correos @una.ac.cr ❌");
+  mostrarError("Solo se permiten correos @una.ac.cr ❌");
 }
 
 /**
- * Displays an error when the email/password combination is invalid.
+ * Displays an error when the password or confirmation field is empty.
  */
-if (params.get("error") === "login") {
-  mostrarError("Usuario o contraseña incorrectos ❌");
+if (params.get("error") === "password") {
+  mostrarError("Debe ingresar una contraseña ❌");
 }
 
 /**
- * Displays an error when the email is not registered in the database.
+ * Displays an error when the password and confirmation password do not match.
  */
-if (params.get("error") === "not_registered") {
-  mostrarError("Este correo no está registrado. Debe crear una cuenta ❌");
+if (params.get("error") === "password_match") {
+  mostrarError("Las contraseñas no coinciden ❌");
 }
 
 /**
- * Displays an error when the backend server is not available.
+ * Displays an error when the password does not meet the minimum length rule.
+ */
+if (params.get("error") === "password_short") {
+  mostrarError("La contraseña debe tener mínimo 3 caracteres ❌");
+}
+
+/**
+ * Displays an error when the submitted email is already registered.
+ */
+if (params.get("error") === "exists") {
+  mostrarError("Este correo ya está registrado. Inicie sesión ❌");
+}
+
+/**
+ * Displays a generic error when the server cannot complete the registration.
  */
 if (params.get("error") === "server") {
-  mostrarError("Servidor no disponible ❌");
-}
-
-/**
- * Displays a success message after a user account is created successfully.
- */
-if (params.get("registered") === "ok") {
-  mostrarExito("Cuenta creada correctamente. Ahora inicia sesión ✅");
+  mostrarError("Error del servidor. Intente nuevamente ❌");
 }
 
 /**
  * Removes query parameters from the browser URL after displaying the message.
  *
- * <p>This avoids showing the same message again if the user refreshes the page.
+ * <p>This prevents the same error message from being displayed again if the
+ * user refreshes the page.
  */
 if (params.toString()) {
   history.replaceState(null, null, window.location.pathname);

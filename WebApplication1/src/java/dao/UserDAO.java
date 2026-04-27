@@ -7,42 +7,47 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 /**
- * Data Access Object for user-related database operations.
+ * Data Access Object responsible for all database operations related to users.
  *
- * <p>This DAO provides the three database operations required by
- * {@link service.UserService}:
+ * <p>This class communicates directly with the {@code users} table in the
+ * database. It is used by the service layer to authenticate existing users,
+ * verify whether an email is already registered, and create new client
+ * accounts.
+ *
+ * <p>The {@code users} table is expected to contain at least the following
+ * columns:
  * <ul>
- *   <li>Authenticating an existing user by email and password.</li>
- *   <li>Looking up a user record by email alone.</li>
- *   <li>Creating a new user with the {@code CLIENT} role.</li>
+ *   <li>{@code id} — unique identifier of the user.</li>
+ *   <li>{@code email} — institutional email address of the user.</li>
+ *   <li>{@code password} — user password.</li>
+ *   <li>{@code role} — user role, such as {@code ADMIN} or {@code CLIENT}.</li>
  * </ul>
  *
- * <p>Each method opens its own {@link java.sql.Connection} via
- * {@link DBConnection#getConnection()} using try-with-resources.
+ * <p>This DAO uses prepared statements to avoid SQL injection and obtains
+ * database connections through {@link DBConnection}.
  *
- * <p><strong>Security note:</strong> passwords are stored and compared in
- * plain text. Consider migrating to a hashed approach (e.g. BCrypt) in a
- * future release.
- *
- * @see service.UserService
- * @see model.User
+ * @see User
+ * @see DBConnection
  */
 public class UserDAO {
 
     /**
-     * Authenticates a user by email and password.
+     * Authenticates a user by verifying the submitted email and password
+     * against the {@code users} table.
      *
-     * <p>Executes an exact-match query against the {@code users} table.
-     * Returns the full user record on success, or {@code null} if no
-     * matching row is found.
+     * <p>If a matching record is found, the database row is converted into a
+     * {@link User} object using {@link #mapUser(ResultSet)}. If no matching
+     * record exists, the method returns {@code null}.
      *
-     * @param email    the user's email address
-     * @param password the plain-text password to verify
-     * @return a populated {@link User} object if credentials match;
-     *         {@code null} otherwise or on database error
+     * <p>This method is used during the login process.
+     *
+     * @param email    the institutional email entered by the user
+     * @param password the password entered by the user
+     * @return a {@link User} object if the credentials are valid;
+     *         {@code null} otherwise
      */
     public User login(String email, String password) {
-        String sql = "SELECT * FROM users WHERE email = ? AND password = ?";
+        String sql = "SELECT id, email, password, role FROM users WHERE email = ? AND password = ?";
 
         try (
             Connection con = DBConnection.getConnection();
@@ -53,12 +58,7 @@ public class UserDAO {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    User user = new User();
-                    user.setId(rs.getInt("id"));
-                    user.setEmail(rs.getString("email"));
-                    user.setPassword(rs.getString("password"));
-                    user.setRole(rs.getString("role"));
-                    return user;
+                    return mapUser(rs);
                 }
             }
 
@@ -70,18 +70,19 @@ public class UserDAO {
     }
 
     /**
-     * Looks up a user record by email address, ignoring the password.
+     * Searches for a user by email address.
      *
-     * <p>Used to distinguish between "wrong password" (email exists, login
-     * failed) and "new user" (email not found) in the auto-registration flow
-     * of {@link service.UserService}.
+     * <p>This method is commonly used before registration to verify whether
+     * an email is already stored in the {@code users} table. It is also used
+     * during login to distinguish between an unregistered email and an invalid
+     * password.
      *
-     * @param email the email address to search for
-     * @return a populated {@link User} object if the email is registered;
-     *         {@code null} if no matching row is found or on database error
+     * @param email the institutional email to search for
+     * @return a {@link User} object if the email exists in the database;
+     *         {@code null} if no user is found
      */
     public User findByEmail(String email) {
-        String sql = "SELECT * FROM users WHERE email = ?";
+        String sql = "SELECT id, email, password, role FROM users WHERE email = ?";
 
         try (
             Connection con = DBConnection.getConnection();
@@ -91,12 +92,7 @@ public class UserDAO {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    User user = new User();
-                    user.setId(rs.getInt("id"));
-                    user.setEmail(rs.getString("email"));
-                    user.setPassword(rs.getString("password"));
-                    user.setRole(rs.getString("role"));
-                    return user;
+                    return mapUser(rs);
                 }
             }
 
@@ -108,15 +104,20 @@ public class UserDAO {
     }
 
     /**
-     * Inserts a new user with the {@code CLIENT} role.
+     * Creates a new client user in the {@code users} table.
      *
-     * <p>This method is called by {@link service.UserService} when an unknown
-     * email attempts to log in, triggering automatic self-registration.
+     * <p>New users registered from the public registration form are always
+     * created with the {@code CLIENT} role. Administrator users should not be
+     * created through this method.
      *
-     * @param email    the email address for the new account
-     * @param password the plain-text password to store
-     * @return {@code true} if the row was inserted successfully;
-     *         {@code false} on error (e.g. duplicate email)
+     * <p>This method only performs the database insertion. Business validations,
+     * such as checking the institutional email domain or confirming that both
+     * passwords match, are handled in the service layer.
+     *
+     * @param email    the institutional email of the new user
+     * @param password the password of the new user
+     * @return {@code true} if the user was inserted successfully;
+     *         {@code false} if the insertion failed
      */
     public boolean createClientUser(String email, String password) {
         String sql = "INSERT INTO users (email, password, role) VALUES (?, ?, 'CLIENT')";
@@ -134,5 +135,25 @@ public class UserDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    /**
+     * Maps the current row of a {@link ResultSet} into a {@link User} object.
+     *
+     * <p>This private helper method centralizes the conversion from database
+     * fields to the {@code User} model, avoiding duplicated mapping logic in
+     * the DAO methods.
+     *
+     * @param rs the {@link ResultSet} positioned on a valid user row
+     * @return a populated {@link User} object
+     * @throws Exception if an error occurs while reading values from the result set
+     */
+    private User mapUser(ResultSet rs) throws Exception {
+        User user = new User();
+        user.setId(rs.getInt("id"));
+        user.setEmail(rs.getString("email"));
+        user.setPassword(rs.getString("password"));
+        user.setRole(rs.getString("role"));
+        return user;
     }
 }

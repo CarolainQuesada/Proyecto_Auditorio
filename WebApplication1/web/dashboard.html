@@ -21,6 +21,29 @@
 
 <body class="bg-[#fcf9f8] flex">
 
+  <!--
+    Client Dashboard Page
+
+    This page represents the client reservation interface of the auditorium
+    reservation system. It allows authenticated CLIENT users to create new
+    reservations by selecting a date, time range, attendee quantity and optional
+    audiovisual equipment.
+
+    Main features:
+    - Displays the logged-in user.
+    - Provides an interactive calendar.
+    - Prevents selection of past dates.
+    - Validates reservation date, time and attendee quantity.
+    - Allows selection of multiple audiovisual equipment items.
+    - Sends valid reservation requests to ReservationServlet.
+    - Displays feedback messages returned by the backend.
+
+    Backend endpoints used:
+    - /currentUser
+    - /logout
+    - /ReservationServlet
+  -->
+
   <aside class="w-72 h-screen bg-[#f6f3f2] flex flex-col p-6">
     <h2 class="text-2xl font-headline text-red-700 font-bold mb-6">Gestión de Espacios</h2>
 
@@ -145,21 +168,91 @@
   </main>
 
   <script>
+    /**
+     * @fileoverview Client Reservation Dashboard.
+     *
+     * <p>This script controls the client dashboard behavior. It validates
+     * the current session, renders an interactive calendar, handles audiovisual
+     * equipment selection and validates the reservation form before submitting
+     * it to the backend.
+     *
+     * <p>The reservation is submitted to {@code ReservationServlet}, which
+     * later communicates with the socket server to process the reservation.
+     */
+
+    /**
+     * DOM element that displays the authenticated user email.
+     * @type {HTMLElement}
+     */
     const usuarioSpan = document.getElementById("usuario");
+
+    /**
+     * DOM element used to display success or error messages.
+     * @type {HTMLElement}
+     */
     const mensaje = document.getElementById("mensaje");
+
+    /**
+     * Hidden input that stores the selected reservation date.
+     * @type {HTMLInputElement}
+     */
     const fecha = document.getElementById("fecha");
+
+    /**
+     * Message displayed when the user attempts to reserve without selecting a date.
+     * @type {HTMLElement}
+     */
     const errorFecha = document.getElementById("errorFecha");
+
+    /**
+     * Calendar container where days are dynamically rendered.
+     * @type {HTMLElement}
+     */
     const calendario = document.getElementById("calendario");
+
+    /**
+     * Header element that displays the current month and year.
+     * @type {HTMLElement}
+     */
     const mesActual = document.getElementById("mesActual");
+
+    /**
+     * Submit button used to create a reservation.
+     * @type {HTMLButtonElement}
+     */
     const btnReservar = document.getElementById("btnReservar");
+
+    /**
+     * Loading message displayed while the reservation form is being submitted.
+     * @type {HTMLElement}
+     */
     const loading = document.getElementById("loading");
 
+    /**
+     * Maximum allowed quantity for each audiovisual equipment type.
+     *
+     * <p>Equipment IDs:
+     * <ul>
+     *   <li>{@code 1} — Proyector, maximum 2 units.</li>
+     *   <li>{@code 2} — Micrófono, maximum 5 units.</li>
+     *   <li>{@code 3} — Sistema de sonido, maximum 3 units.</li>
+     * </ul>
+     *
+     * @type {Object.<string, number>}
+     */
     const equipmentMax = {
       "1": 2,
       "2": 5,
       "3": 3
     };
 
+    /**
+     * Initializes equipment checkbox behavior.
+     *
+     * <p>When an equipment checkbox is selected, its quantity input is enabled
+     * and set to 1. When it is unchecked, the quantity is reset to 0 and the
+     * input is disabled again.
+     */
     document.querySelectorAll(".equipment-check").forEach(check => {
       check.addEventListener("change", function () {
         const id = this.value;
@@ -178,6 +271,13 @@
       });
     });
 
+    /**
+     * Verifies whether there is an active user session.
+     *
+     * <p>The dashboard requires an authenticated user. The current user is
+     * obtained from the {@code currentUser} servlet. If no session exists, the
+     * user is redirected to the login page.
+     */
     fetch("currentUser")
       .then(r => r.text())
       .then(u => {
@@ -191,9 +291,26 @@
         window.location.href = "index.html";
       });
 
+    /**
+     * URL parameters used to read backend response messages.
+     * @type {URLSearchParams}
+     */
     const params = new URLSearchParams(window.location.search);
+
+    /**
+     * Reservation result message code returned by the backend.
+     * @type {string|null}
+     */
     const msg = params.get("msg");
 
+    /**
+     * Mapping of backend message codes to user-friendly messages.
+     *
+     * <p>These messages are displayed after reservation attempts, validation
+     * failures, server errors or authorization issues.
+     *
+     * @type {Object.<string, string>}
+     */
     const errorMsg = {
       "ok": "✅ Reserva creada exitosamente",
       "busy": "⚠️ Horario ya ocupado",
@@ -213,6 +330,22 @@
       history.replaceState(null, null, window.location.pathname);
     }
 
+    /**
+     * Validates the reservation form before submitting it.
+     *
+     * <p>The method prevents invalid reservations from being sent to the
+     * server. It checks that a date was selected, that the date is not in the
+     * past, that the start time is before the end time, that the attendee
+     * quantity is within the allowed range, and that equipment quantities are
+     * valid.
+     *
+     * <p>If all validations pass, the reservation button is disabled, a loading
+     * indicator is shown, and the form is submitted to {@code ReservationServlet}.
+     *
+     * @param {Event} e the form submission event
+     * @returns {boolean} {@code true} if the form is submitted;
+     *                    {@code false} if validation fails
+     */
     function validarYEnviar(e) {
       e.preventDefault();
 
@@ -272,9 +405,28 @@
       return true;
     }
 
+    /**
+     * Current displayed month in the calendar.
+     * @type {number}
+     */
     let mes = new Date().getMonth();
+
+    /**
+     * Current displayed year in the calendar.
+     * @type {number}
+     */
     let anio = new Date().getFullYear();
 
+    /**
+     * Generates and renders the monthly calendar.
+     *
+     * <p>The calendar displays all days of the current month. Past dates are
+     * visually disabled and cannot be selected. When a valid day is clicked,
+     * it is marked as selected and its date is stored in the hidden
+     * {@code fecha} input.
+     *
+     * @returns {void}
+     */
     function generarCalendario() {
       calendario.innerHTML = "";
 
@@ -322,6 +474,16 @@
       });
     }
 
+    /**
+     * Changes the displayed month in the calendar.
+     *
+     * <p>A negative value moves the calendar to the previous month, while a
+     * positive value moves it to the next month. The year is adjusted when the
+     * month goes below January or above December.
+     *
+     * @param {number} delta number of months to move; usually {@code -1} or {@code 1}
+     * @returns {void}
+     */
     function cambiarMes(delta) {
       mes += delta;
 
@@ -338,6 +500,9 @@
       generarCalendario();
     }
 
+    /**
+     * Initializes the calendar when the page loads.
+     */
     generarCalendario();
   </script>
 

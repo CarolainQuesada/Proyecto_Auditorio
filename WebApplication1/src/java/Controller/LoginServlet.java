@@ -8,70 +8,82 @@ import javax.servlet.annotation.*;
 import java.io.IOException;
 
 /**
- * Servlet that handles user authentication for the UNA Space Management System.
+ * Servlet responsible for handling user authentication in the system.
  *
- * <p>Mapped to {@code /login}, this servlet processes HTTP POST requests from
- * the login form. It validates the submitted credentials, delegates
- * authentication and registration to {@link UserService}, creates an HTTP
- * session on success, and redirects the user to the appropriate landing page
- * based on their assigned role.
+ * <p>Mapped to {@code /login}, this servlet receives login requests from
+ * {@code index.html}, validates the submitted credentials, delegates the
+ * authentication process to {@link UserService}, and creates an HTTP session
+ * when the login is successful.
  *
- * <p>Email validation rules:
+ * <p>The access module works with users stored in the {@code users} database
+ * table. The servlet does not create users automatically; if the email is not
+ * registered, the user is redirected back to the login page with an appropriate
+ * error message.
+ *
+ * <p>Validation rules:
  * <ul>
- *   <li>The email field must be non-null and non-empty.</li>
- *   <li>The domain must be {@code @una.ac.cr}; any other domain redirects to
- *       {@code index.html?error=email}.</li>
+ *   <li>The email field must not be empty.</li>
+ *   <li>The email must belong to the institutional domain {@code @una.ac.cr}.</li>
+ *   <li>The password field must not be empty.</li>
  * </ul>
  *
- * <p>Post-authentication redirects by role:
+ * <p>Session attributes created after successful authentication:
  * <ul>
- *   <li>{@code ADMIN}  → {@code admin.html}</li>
- *   <li>{@code CLIENT} → {@code dashboard.html}</li>
- *   <li>Unknown role   → session invalidated, redirect to
- *       {@code index.html?error=login}</li>
+ *   <li>{@code emailUsuario} — stores the authenticated user's email.</li>
+ *   <li>{@code role} — stores the user's role, such as {@code ADMIN} or {@code CLIENT}.</li>
  * </ul>
  *
- * <p>HTTP GET requests are redirected to {@code index.html} to prevent
- * direct browser access to the servlet URL.
- *
- * <p>Session attributes set on successful login:
+ * <p>Redirection rules after login:
  * <ul>
- *   <li>{@code emailUsuario} — the authenticated user's email address.</li>
- *   <li>{@code role}         — the user's role in uppercase
- *                              ({@code ADMIN} or {@code CLIENT}).</li>
+ *   <li>{@code ADMIN} users are redirected to {@code admin.html}.</li>
+ *   <li>{@code CLIENT} users are redirected to {@code dashboard.html}.</li>
+ *   <li>Invalid or unknown roles invalidate the session and redirect to the login page.</li>
  * </ul>
  *
  * @see UserService
+ * @see RegisterServlet
  * @see LogoutServlet
- * @see CurrentUserServlet
  */
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
 
     /**
-     * Service layer responsible for authenticating or auto-registering users.
+     * Service used to validate user credentials and obtain the user's role.
      */
     private final UserService userService = new UserService();
 
     /**
-     * Processes the login form submission.
+     * Handles HTTP POST requests sent from the login form.
      *
-     * <p>Validates the email domain and password presence, calls
-     * {@link UserService#loginOrRegisterUser(String, String)}, and on success
-     * creates a new session with the user's email and role before redirecting
-     * to the appropriate page.
+     * <p>This method validates the email and password fields, normalizes the
+     * email to lowercase, verifies that it belongs to the {@code @una.ac.cr}
+     * domain, and delegates authentication to {@link UserService#loginUser}.
      *
-     * @param request  the HTTP request; must include the {@code email} and
-     *                 {@code password} parameters
-     * @param response the HTTP response used to issue the redirect
+     * <p>If authentication is successful, a new HTTP session is created and
+     * the user's email and role are stored as session attributes. The user is
+     * then redirected according to their role.
+     *
+     * <p>Possible redirects:
+     * <ul>
+     *   <li>{@code index.html?error=email} — invalid or empty email.</li>
+     *   <li>{@code index.html?error=not_registered} — email does not exist in the database.</li>
+     *   <li>{@code index.html?error=login} — invalid password or authentication error.</li>
+     *   <li>{@code admin.html} — successful login with {@code ADMIN} role.</li>
+     *   <li>{@code dashboard.html} — successful login with {@code CLIENT} role.</li>
+     * </ul>
+     *
+     * @param request  the HTTP request containing {@code email} and {@code password}
+     *                 parameters from the login form
+     * @param response the HTTP response used to redirect the user according
+     *                 to the authentication result
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs during redirect
+     * @throws IOException      if an I/O error occurs during redirection
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String email    = request.getParameter("email");
+        String email = request.getParameter("email");
         String password = request.getParameter("password");
 
         if (email == null || email.trim().isEmpty()) {
@@ -81,7 +93,6 @@ public class LoginServlet extends HttpServlet {
 
         email = email.trim().toLowerCase();
 
-        // Enforce the institutional email domain restriction.
         if (!email.endsWith("@una.ac.cr")) {
             response.sendRedirect("index.html?error=email");
             return;
@@ -94,16 +105,20 @@ public class LoginServlet extends HttpServlet {
 
         password = password.trim();
 
-        String role = userService.loginOrRegisterUser(email, password);
+        String result = userService.loginUser(email, password);
 
-        if (role == null || "ERROR".equalsIgnoreCase(role)) {
+        if ("NOT_REGISTERED".equals(result)) {
+            response.sendRedirect("index.html?error=not_registered");
+            return;
+        }
+
+        if ("INVALID".equals(result) || "ERROR".equals(result)) {
             response.sendRedirect("index.html?error=login");
             return;
         }
 
-        role = role.toUpperCase();
+        String role = result.toUpperCase();
 
-        // Create a new session and store the authenticated user's attributes.
         HttpSession session = request.getSession(true);
         session.setAttribute("emailUsuario", email);
         session.setAttribute("role", role);
@@ -119,15 +134,15 @@ public class LoginServlet extends HttpServlet {
     }
 
     /**
-     * Redirects any direct GET access to the login page.
+     * Handles direct HTTP GET access to the login servlet.
      *
-     * <p>This prevents users from bookmarking or navigating directly to the
-     * {@code /login} servlet URL in their browser.
+     * <p>Since authentication must be performed through the login form using
+     * POST, direct access to {@code /login} is redirected to {@code index.html}.
      *
-     * @param request  the HTTP request
-     * @param response the HTTP response used to redirect to {@code index.html}
+     * @param request  the HTTP request received by the servlet
+     * @param response the HTTP response used to redirect the user to the login page
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException      if an I/O error occurs during redirect
+     * @throws IOException      if an I/O error occurs during redirection
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)

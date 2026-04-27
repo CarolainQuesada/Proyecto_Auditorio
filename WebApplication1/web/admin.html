@@ -463,22 +463,22 @@
                 <td class="p-2 text-sm">${p[6]}</td>
                 <td class="p-2 text-left">${equipHtml}</td>
                 <td class="p-2">
-                  ${p[5] === "PENDING" ? `
-                    <button type="button" onclick="window.location.href='confirmReservation?id=${p[0]}'"
-                      class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700" title="Confirmar"></button>
-                  ` : ""}
+                ${p[5] === "PENDING" ? `
+                <button type="button" onclick="window.location.href='confirmReservation?id=${p[0]}'"
+                class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700" title="Confirmar">✔</button>
+  ` : ""}
 
-                  ${(p[5] === "PENDING" || p[5] === "CONFIRMED") ? `
-                    <button type="button" onclick="editar(${p[0]}, '${p[1]}', '${p[2]}', '${p[3]}', ${p[4]}, '${p[5]}')"
-                      class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 ml-1" title="Editar"></button>
-                  ` : ""}
+               ${(p[5] === "PENDING" || p[5] === "CONFIRMED") ? `
+               <button type="button" onclick="editar(${p[0]}, '${p[1]}', '${p[2]}', '${p[3]}', ${p[4]}, '${p[5]}')"
+      class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 ml-1" title="Editar">✎</button>
+  ` : ""}
 
-                  <button type="button" onclick="eliminar(${p[0]})"
-                    class="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 ml-1" title="Eliminar">✕</button>
+  <button type="button" onclick="eliminar(${p[0]})"
+    class="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 ml-1" title="Eliminar">✕</button>
 
-                  <button type="button" onclick="verEquipos(${p[0]}, '${p[7] || ""}')"
-                    class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 ml-1" title="Ver equipos">?</button>
-                </td>
+  <button type="button" onclick="verEquipos(${p[0]}, '${p[7] || ""}')"
+    class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 ml-1" title="Ver equipos">🔧</button>
+            </td>
               </tr>
             `;
           });

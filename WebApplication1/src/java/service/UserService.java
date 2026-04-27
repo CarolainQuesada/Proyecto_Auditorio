@@ -4,113 +4,154 @@ import dao.UserDAO;
 import model.User;
 
 /**
- * Service layer for user authentication and self-registration.
+ * Service layer responsible for user authentication and registration rules.
  *
- * <p>{@code UserService} provides a single entry point,
- * {@link #loginOrRegisterUser(String, String)}, that handles three scenarios
- * in order:
- * <ol>
- *   <li><b>Hardcoded admin</b> — credentials matching the built-in admin
- *       account return {@code "ADMIN"} immediately without touching the
- *       database.</li>
- *   <li><b>Existing user login</b> — if the email/password pair matches a
- *       database record the user's normalised role is returned.</li>
- *   <li><b>Auto-registration</b> — if the email is not found in the database
- *       a new {@code CLIENT} account is created and the user is logged in
- *       immediately.</li>
- * </ol>
+ * <p>This class contains the business logic for the access module. It
+ * validates login credentials, verifies whether users already exist, registers
+ * new client accounts and normalizes user roles returned from the database.
  *
- * <h2>Role values returned</h2>
+ * <p>The service works together with {@link UserDAO}, which performs the
+ * database operations against the {@code users} table.
+ *
+ * <p>Main responsibilities:
  * <ul>
- *   <li>{@code "ADMIN"}  — administrator account.</li>
- *   <li>{@code "CLIENT"} — regular client account (mapped from the Spanish
- *       database value {@code "CLIENTE"} via {@link #normalizeRole(String)}).</li>
- *   <li>{@code "ERROR"}  — authentication or registration failed.</li>
+ *   <li>Authenticate existing users.</li>
+ *   <li>Detect unregistered emails.</li>
+ *   <li>Register new users with the {@code CLIENT} role.</li>
+ *   <li>Validate institutional email domain {@code @una.ac.cr}.</li>
+ *   <li>Validate password and confirmation fields.</li>
+ *   <li>Normalize database roles to application roles.</li>
  * </ul>
  *
  * @see UserDAO
- * @see model.User
+ * @see User
  */
 public class UserService {
 
-    /** DAO used for database authentication and user creation. */
+    /**
+     * DAO used to query and persist users in the database.
+     */
     private final UserDAO dao = new UserDAO();
 
-    /** Email address of the built-in administrator account. */
-    private static final String ADMIN_EMAIL = "admin@una.ac.cr";
-
-    /** Password of the built-in administrator account. */
-    private static final String ADMIN_PASSWORD = "123";
-
     /**
-     * Authenticates an existing user or registers a new one if the email is
-     * not yet in the database.
+     * Authenticates an existing user.
      *
-     * <p>The lookup order is:
-     * <ol>
-     *   <li>Check against the hardcoded admin credentials.</li>
-     *   <li>Attempt a database login with the given email and password.</li>
-     *   <li>If no user is found and the email is also not registered, create
-     *       a new {@code CLIENT} user and log them in.</li>
-     *   <li>If the email exists but the password is wrong, return
-     *       {@code "ERROR"}.</li>
-     * </ol>
+     * <p>This method first verifies whether the email exists in the
+     * {@code users} table. If the email is not registered, it returns
+     * {@code "NOT_REGISTERED"} so the login page can guide the user to the
+     * registration form.
      *
-     * @param email    the user's email address; comparison is case-insensitive
-     *                 for the admin check, exact-match for database queries
-     * @param password the plain-text password
-     * @return {@code "ADMIN"}, {@code "CLIENT"}, or {@code "ERROR"}
+     * <p>If the email exists, the method validates the password using
+     * {@link UserDAO#login(String, String)}. When the password is incorrect,
+     * it returns {@code "INVALID"}.
+     *
+     * <p>If authentication succeeds, the user role is normalized and returned.
+     *
+     * <p>Possible return values:
+     * <ul>
+     *   <li>{@code "ADMIN"} — authenticated administrator user.</li>
+     *   <li>{@code "CLIENT"} — authenticated client user.</li>
+     *   <li>{@code "NOT_REGISTERED"} — email does not exist in the database.</li>
+     *   <li>{@code "INVALID"} — email exists but password is incorrect.</li>
+     *   <li>{@code "ERROR"} — invalid or unknown role.</li>
+     * </ul>
+     *
+     * @param email    institutional email entered in the login form
+     * @param password password entered in the login form
+     * @return authentication result or normalized user role
      */
-    public String loginOrRegisterUser(String email, String password) {
+    public String loginUser(String email, String password) {
+        User existingUser = dao.findByEmail(email);
 
-        try {
-            if (ADMIN_EMAIL.equalsIgnoreCase(email) && ADMIN_PASSWORD.equals(password)) {
-                return "ADMIN";
-            }
-
-            User user = dao.login(email, password);
-
-            if (user != null) {
-                return normalizeRole(user.getRole());
-            }
-
-            User existingUser = dao.findByEmail(email);
-
-            if (existingUser != null) {
-                return "ERROR";
-            }
-
-            boolean created = dao.createClientUser(email, password);
-
-            if (!created) {
-                return "ERROR";
-            }
-
-            User newUser = dao.login(email, password);
-
-            if (newUser != null) {
-                return normalizeRole(newUser.getRole());
-            }
-
-            return "ERROR";
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "ERROR";
+        if (existingUser == null) {
+            return "NOT_REGISTERED";
         }
+
+        User user = dao.login(email, password);
+
+        if (user == null) {
+            return "INVALID";
+        }
+
+        return normalizeRole(user.getRole());
     }
 
     /**
-     * Normalises a raw role string from the database to one of the
-     * application-level role constants.
+     * Registers a new client user.
      *
-     * <p>The Spanish value {@code "CLIENTE"} is mapped to {@code "CLIENT"}.
-     * The values {@code "ADMIN"} and {@code "CLIENT"} are returned as-is.
-     * Any other value (including {@code null}) returns {@code "ERROR"}.
+     * <p>This method validates the registration data received from
+     * {@code register.html}. Only institutional emails ending in
+     * {@code @una.ac.cr} are accepted. The password and confirmation password
+     * must be present, must match, and must meet the minimum length rule.
      *
-     * @param role the raw role string as stored in the database; may be
-     *             {@code null}
-     * @return {@code "ADMIN"}, {@code "CLIENT"}, or {@code "ERROR"}
+     * <p>Before creating the account, the method verifies that the email is not
+     * already registered. If all validations pass, a new user is inserted into
+     * the database with the {@code CLIENT} role.
+     *
+     * <p>Possible return values:
+     * <ul>
+     *   <li>{@code "CREATED"} — user was successfully registered.</li>
+     *   <li>{@code "EMAIL"} — email is empty or does not belong to {@code @una.ac.cr}.</li>
+     *   <li>{@code "PASSWORD"} — password or confirmation password is empty.</li>
+     *   <li>{@code "PASSWORD_MATCH"} — password and confirmation do not match.</li>
+     *   <li>{@code "PASSWORD_SHORT"} — password length is below the minimum requirement.</li>
+     *   <li>{@code "EXISTS"} — email is already registered.</li>
+     *   <li>{@code "ERROR"} — database insertion failed.</li>
+     * </ul>
+     *
+     * @param email           institutional email entered in the registration form
+     * @param password        password entered in the registration form
+     * @param confirmPassword password confirmation entered in the registration form
+     * @return registration result code
+     */
+    public String registerClient(String email, String password, String confirmPassword) {
+
+        if (email == null || email.trim().isEmpty()) {
+            return "EMAIL";
+        }
+
+        email = email.trim().toLowerCase();
+
+        if (!email.endsWith("@una.ac.cr")) {
+            return "EMAIL";
+        }
+
+        if (password == null || password.trim().isEmpty()
+                || confirmPassword == null || confirmPassword.trim().isEmpty()) {
+            return "PASSWORD";
+        }
+
+        password = password.trim();
+        confirmPassword = confirmPassword.trim();
+
+        if (!password.equals(confirmPassword)) {
+            return "PASSWORD_MATCH";
+        }
+
+        if (password.length() < 3) {
+            return "PASSWORD_SHORT";
+        }
+
+        User existingUser = dao.findByEmail(email);
+
+        if (existingUser != null) {
+            return "EXISTS";
+        }
+
+        boolean created = dao.createClientUser(email, password);
+
+        return created ? "CREATED" : "ERROR";
+    }
+
+    /**
+     * Normalizes the role value stored in the database.
+     *
+     * <p>The application works with the roles {@code ADMIN} and {@code CLIENT}.
+     * This method also accepts the Spanish value {@code CLIENTE} and converts
+     * it to {@code CLIENT}, allowing compatibility with older database records.
+     *
+     * @param role role value retrieved from the database
+     * @return normalized role value, or {@code "ERROR"} if the role is invalid
      */
     private String normalizeRole(String role) {
         if (role == null) {

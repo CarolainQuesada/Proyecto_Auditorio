@@ -73,8 +73,7 @@ public class ListReservationsServlet extends HttpServlet {
 
         String role = session.getAttribute("role").toString();
 
-        if (!"ADMIN".equals(role)) {
-            resp.setStatus(403);
+        if (!"ADMIN".equalsIgnoreCase(role)) {            resp.setStatus(403);
             resp.getWriter().write("ERROR: forbidden");
             return;
         }
