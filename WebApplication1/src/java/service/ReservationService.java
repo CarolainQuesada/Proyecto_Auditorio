@@ -335,6 +335,85 @@ public class ReservationService {
     }
 
     /**
+     * Cancels a reservation owned by the given user.
+     *
+     * <p>Only reservations with status {@code PENDING} or {@code CONFIRMED}
+     * can be cancelled. The ownership check prevents users from cancelling
+     * other users' reservations. The reservation is fully deleted from the DB.
+     *
+     * @param id    the reservation ID to cancel
+     * @param email the email of the user requesting the cancellation
+     * @return {@code "cancelled"} on success; {@code "not_found"} if the
+     *         reservation does not exist or does not belong to this user;
+     *         {@code "not_allowed"} if the status prevents cancellation;
+     *         {@code "error"} on DB failure
+     */
+    public String cancelReservation(int id, String email) {
+        Reservation r = dao.getById(id);
+
+        if (r == null || !r.getUser().equalsIgnoreCase(email)) {
+            return "not_found";
+        }
+
+        if ("EXPIRED".equalsIgnoreCase(r.getStatus())) {
+            return "not_allowed";
+        }
+
+        boolean ok = dao.delete(id);
+
+        if (ok) {
+            log.log(email, "CANCEL_OK", "Reserva cancelada id=" + id);
+        } else {
+            log.log(email, "CANCEL_ERROR", "Error al cancelar id=" + id);
+        }
+
+        return ok ? "cancelled" : "error";
+    }
+
+    /**
+     * Lists all reservations for a specific user in pipe-delimited plain text.
+     *
+     * <p>Format per entry:
+     * <pre>
+     * id,date,startTime,endTime,quantity,status,equipment|
+     * </pre>
+     *
+     * @param email the email of the user whose reservations are listed
+     * @return formatted string with the user's reservations; empty if none
+     */
+    public String listReservationsByUser(String email) {
+        List<Reservation> list = dao.getByUser(email);
+        StringBuilder sb = new StringBuilder();
+
+        for (Reservation r : list) {
+            Reservation full = dao.getByIdWithEquipment(r.getId());
+            List<ReservationEquipment> equipments = new ArrayList<>();
+            if (full != null) {
+                equipments = full.getEquipments();
+            }
+
+            String equipStr = "";
+            if (!equipments.isEmpty()) {
+                List<String> parts = new ArrayList<>();
+                for (ReservationEquipment re : equipments) {
+                    parts.add(re.getEquipmentId() + ":" + re.getQuantity());
+                }
+                equipStr = String.join(",", parts);
+            }
+
+            sb.append(r.getId()).append(",")
+              .append(r.getDate()).append(",")
+              .append(r.getStartTime()).append(",")
+              .append(r.getEndTime()).append(",")
+              .append(r.getQuantity()).append(",")
+              .append(r.getStatus()).append(",")
+              .append(equipStr).append("|");
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * Lists all non-expired reservations in a plain text format.
      *
      * <p>The returned string is used by the admin web interface. Each

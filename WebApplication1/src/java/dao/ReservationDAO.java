@@ -283,6 +283,38 @@ public class ReservationDAO {
     }
 
     /**
+     * Retrieves all reservations (including EXPIRED) for a specific user,
+     * ordered by date and start time descending.
+     *
+     * @param email the email of the user
+     * @return a list of reservations; never {@code null}, but may be empty
+     */
+    public List<Reservation> getByUser(String email) {
+        List<Reservation> list = new ArrayList<>();
+
+        String sql = "SELECT * FROM reservations "
+                + "WHERE user = ? "
+                + "ORDER BY date DESC, start_time DESC";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapReservation(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] getByUser: " + e.getMessage());
+        }
+
+        return list;
+    }
+
+    /**
      * Retrieves a single reservation by its primary key.
      *
      * @param id the reservation ID

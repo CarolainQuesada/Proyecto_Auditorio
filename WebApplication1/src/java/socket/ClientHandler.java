@@ -129,6 +129,14 @@ public class ClientHandler extends Thread {
                     handleList(out);
                     break;
 
+                case "MY_RESERVATIONS":
+                    handleMyReservations(parts, out);
+                    break;
+
+                case "CANCEL":
+                    handleCancel(parts, out);
+                    break;
+
                 default:
                     out.println("error");
                     serverGUI.log("Unknown command from " + clientInfo + ": " + action);
@@ -543,6 +551,73 @@ public class ClientHandler extends Thread {
                 return 3; // Sistema de sonido
             default:
                 return 0;
+        }
+    }
+
+    /**
+     * Processes a {@code MY_RESERVATIONS} command.
+     *
+     * <p>Expected format: {@code MY_RESERVATIONS;<email>}
+     * Returns pipe-delimited reservations belonging to the given user.
+     *
+     * @param parts the split command tokens
+     * @param out   the writer connected to the client socket
+     */
+    private void handleMyReservations(String[] parts, PrintWriter out) {
+        try {
+            if (parts.length < 2 || parts[1].trim().isEmpty()) {
+                out.println("error");
+                serverGUI.log("MY_RESERVATIONS rejected: missing email");
+                return;
+            }
+
+            String email = parts[1].trim();
+            serverGUI.log("MY_RESERVATIONS request for: " + email);
+
+            String result = reservationService.listReservationsByUser(email);
+            out.println(result);
+
+            serverGUI.log("MY_RESERVATIONS sent for: " + email);
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+            serverGUI.log("MY_RESERVATIONS error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Processes a {@code CANCEL} command sent by the client.
+     *
+     * <p>Expected format: {@code CANCEL;<id>;<email>}
+     * The user can only cancel their own reservations.
+     *
+     * @param parts the split command tokens
+     * @param out   the writer connected to the client socket
+     */
+    private void handleCancel(String[] parts, PrintWriter out) {
+        try {
+            if (parts.length < 3 || parts[1].trim().isEmpty() || parts[2].trim().isEmpty()) {
+                out.println("error");
+                serverGUI.log("CANCEL rejected: missing id or email");
+                return;
+            }
+
+            int id = Integer.parseInt(parts[1].trim());
+            String email = parts[2].trim();
+
+            serverGUI.log("CANCEL request for reservation ID: " + id + " by: " + email);
+
+            String result = reservationService.cancelReservation(id, email);
+            out.println(result);
+
+            serverGUI.log("CANCEL result for ID " + id + ": " + result);
+        } catch (NumberFormatException e) {
+            out.println("error");
+            serverGUI.log("CANCEL rejected: invalid id format");
+        } catch (Exception e) {
+            out.println("ERROR: " + e.getMessage());
+            serverGUI.log("CANCEL error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

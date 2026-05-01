@@ -3,508 +3,576 @@
 <head>
   <meta charset="UTF-8">
   <title>Gestión de Espacios - UNA</title>
-
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader&family=Public+Sans&display=swap" rel="stylesheet"/>
-
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    body { font-family: 'Public Sans', sans-serif; }
+    * { box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: #f8f7f5; margin: 0; }
     .font-headline { font-family: 'Newsreader', serif; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-    .dia { padding: 12px; border-radius: 6px; text-align: center; cursor: pointer; background: #f6f3f2; }
-    .dia:hover { background: #eae7e7; }
-    .selected-day { background: #9e0000 !important; color: white; }
-    .past-day { opacity: 0.4; cursor: not-allowed; }
-    .loading { opacity: 0.7; pointer-events: none; }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 280px; background: #fff; border-right: 1px solid #ede9e8; display: flex; flex-direction: column; padding: 32px 24px; position: sticky; top: 0; height: 100vh; }
+    .main { flex: 1; padding: 40px; overflow-y: auto; }
+
+    /* ── Sidebar brand ── */
+    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: #9e0000; display: inline-block; margin-right: 6px; }
+
+    /* ── Vertical steps ── */
+    .steps-list { list-style: none; padding: 0; margin: 0; }
+    .step-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 10px 0; position: relative; cursor: pointer;
+    }
+    .step-connector {
+      position: absolute; left: 15px; top: 38px;
+      width: 2px; height: calc(100% - 10px);
+      background: #e5e0de; z-index: 0;
+    }
+    .step-connector.done { background: #9e0000; }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; border: 2px solid #d9d3d1;
+      color: #aaa; background: #fff; position: relative; z-index: 1;
+      transition: all 0.25s;
+    }
+    .step-num.active  { background: #9e0000; color: #fff; border-color: #9e0000; }
+    .step-num.done    { background: #fff; color: #9e0000; border-color: #9e0000; font-size: 15px; }
+    .step-text { padding-top: 4px; }
+    .step-title { font-size: 14px; font-weight: 600; color: #bbb; transition: color 0.25s; line-height: 1.3; }
+    .step-title.active { color: #9e0000; }
+    .step-title.done   { color: #555; }
+    .step-sub { font-size: 12px; color: #ccc; margin-top: 1px; }
+    .step-sub.done { color: #9e0000; }
+
+    /* ── Panel ── */
+    .panel { display: none; animation: fadeUp 0.22s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    .card { background: #fff; border-radius: 16px; border: 1px solid #ede9e8; padding: 32px; margin-bottom: 16px; }
+
+    /* ── Calendar ── */
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+    .cal-head { font-size: 11px; font-weight: 600; color: #aaa; text-align: center; padding: 4px 0; text-transform: uppercase; letter-spacing: .04em; }
+    .cal-day {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+      color: #444; transition: all 0.15s;
+    }
+    .cal-day:hover:not(.past) { background: #fdf0f0; color: #9e0000; }
+    .cal-day.selected { background: #9e0000 !important; color: #fff !important; }
+    .cal-day.today { font-weight: 700; color: #9e0000; }
+    .cal-day.past  { color: #ddd; cursor: not-allowed; }
+
+    /* ── Inputs ── */
+    .inp {
+      width: 100%; border: 1.5px solid #e5e0de; border-radius: 10px;
+      padding: 11px 14px; font-size: 15px; font-family: 'DM Sans',sans-serif;
+      background: #fff; color: #1a0a0a; outline: none; transition: border 0.18s;
+    }
+    .inp:focus { border-color: #9e0000; }
+    .inp-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; display: block; }
+
+    /* ── Equipment ── */
+    .eq-card {
+      display: flex; align-items: center; gap: 14px;
+      border: 1.5px solid #e5e0de; border-radius: 12px; padding: 14px 16px;
+      cursor: pointer; transition: all 0.18s; background: #fff; margin-bottom: 10px;
+    }
+    .eq-card:hover  { border-color: #9e0000; background: #fff8f8; }
+    .eq-card.sel    { border-color: #9e0000; background: #fff2f2; }
+    .eq-icon { font-size: 22px; width: 42px; text-align: center; flex-shrink: 0; }
+    .eq-qty { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .qb {
+      width: 28px; height: 28px; border-radius: 7px; border: 1.5px solid #ddd;
+      background: #fff; color: #9e0000; font-size: 16px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .qb:hover { background: #9e0000; color: #fff; border-color: #9e0000; }
+    .qdisplay { font-size: 15px; font-weight: 600; min-width: 24px; text-align: center; color: #333; }
+    .check-circle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; color: transparent; transition: all .18s; }
+    .eq-card.sel .check-circle { background: #9e0000; border-color: #9e0000; color: #fff; }
+
+    /* ── Buttons ── */
+    .btn-red {
+      background: #9e0000; color: #fff; padding: 12px 26px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; border: none; cursor: pointer;
+      font-family: 'DM Sans',sans-serif; transition: all .18s;
+    }
+    .btn-red:hover { background: #7b0000; }
+    .btn-red:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-out {
+      background: #fff; color: #666; padding: 12px 26px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; border: 1.5px solid #ddd; cursor: pointer;
+      font-family: 'DM Sans',sans-serif; transition: all .18s;
+    }
+    .btn-out:hover { border-color: #9e0000; color: #9e0000; }
+
+    /* ── Preset pills ── */
+    .preset { padding: 6px 12px; border-radius: 20px; border: 1.5px solid #e5e0de; background: #fff; font-size: 12px; font-weight: 500; color: #666; cursor: pointer; transition: all .15s; font-family: 'DM Sans',sans-serif; }
+    .preset:hover { border-color: #9e0000; color: #9e0000; }
+
+    /* ── Summary ── */
+    .sum-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ede9e8; font-size: 14px; }
+    .sum-row:last-child { border: none; }
+    .sum-lbl { color: #999; }
+    .sum-val { font-weight: 600; color: #1a0a0a; }
+
+    /* ── Notif ── */
+    .notif { border-radius: 10px; padding: 11px 16px; font-size: 13px; font-weight: 500; display: none; align-items: center; gap: 8px; margin-bottom: 20px; }
+    .notif.on { display: flex; }
+    .notif.ok  { background: #f0faf5; color: #166534; border: 1px solid #bbf7d0; }
+    .notif.err { background: #fff2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .notif.inf { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
   </style>
 </head>
+<body>
+<div class="layout">
 
-<body class="bg-[#fcf9f8] flex">
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <!-- Brand -->
+    <div style="margin-bottom:32px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <div style="width:28px;height:28px;background:#9e0000;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <span style="color:#fff;font-size:14px;font-weight:700;">A</span>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:#555;">Sistema UNA</span>
+      </div>
+      <h2 class="font-headline" style="font-size:20px;color:#1a0a0a;line-height:1.3;margin:8px 0 2px;">Gestión de<br>Espacios</h2>
+      <p style="font-size:11px;color:#bbb;margin:0;">Auditorio Principal</p>
+    </div>
 
-  <!--
-    Client Dashboard Page
+    <!-- Step list -->
+    <ul class="steps-list" style="flex:1;">
+      <li style="position:relative;">
+        <div class="step-row" onclick="tryGoStep(1)">
+          <div class="step-num active" id="sn1">1</div>
+          <div class="step-text">
+            <div class="step-title active" id="st1">Seleccionar fecha</div>
+            <div class="step-sub" id="ss1">Elige el día del evento</div>
+          </div>
+        </div>
+        <div class="step-connector" id="sc1"></div>
+      </li>
+      <li style="position:relative;">
+        <div class="step-row" onclick="tryGoStep(2)">
+          <div class="step-num" id="sn2">2</div>
+          <div class="step-text">
+            <div class="step-title" id="st2">Seleccionar horario</div>
+            <div class="step-sub" id="ss2">Hora de inicio y fin</div>
+          </div>
+        </div>
+        <div class="step-connector" id="sc2"></div>
+      </li>
+      <li style="position:relative;">
+        <div class="step-row" onclick="tryGoStep(3)">
+          <div class="step-num" id="sn3">3</div>
+          <div class="step-text">
+            <div class="step-title" id="st3">Asistentes y equipo</div>
+            <div class="step-sub" id="ss3">Cantidad y audiovisual</div>
+          </div>
+        </div>
+        <div class="step-connector" id="sc3"></div>
+      </li>
+      <li style="position:relative;">
+        <div class="step-row" onclick="tryGoStep(4)">
+          <div class="step-num" id="sn4">4</div>
+          <div class="step-text">
+            <div class="step-title" id="st4">Confirmación</div>
+            <div class="step-sub" id="ss4">Revisar y confirmar</div>
+          </div>
+        </div>
+      </li>
+    </ul>
 
-    This page represents the client reservation interface of the auditorium
-    reservation system. It allows authenticated CLIENT users to create new
-    reservations by selecting a date, time range, attendee quantity and optional
-    audiovisual equipment.
-
-    Main features:
-    - Displays the logged-in user.
-    - Provides an interactive calendar.
-    - Prevents selection of past dates.
-    - Validates reservation date, time and attendee quantity.
-    - Allows selection of multiple audiovisual equipment items.
-    - Sends valid reservation requests to ReservationServlet.
-    - Displays feedback messages returned by the backend.
-
-    Backend endpoints used:
-    - /currentUser
-    - /logout
-    - /ReservationServlet
-  -->
-
-  <aside class="w-72 h-screen bg-[#f6f3f2] flex flex-col p-6">
-    <h2 class="text-2xl font-headline text-red-700 font-bold mb-6">Gestión de Espacios</h2>
-
-    <nav class="flex flex-col gap-3 text-sm">
-      <a class="text-red-700 font-bold">Reservaciones</a>
-    </nav>
-
-    <div class="mt-auto">
-      <a href="logout" class="text-red-700 font-bold">Cerrar sesión</a>
+    <!-- Bottom nav -->
+    <div style="border-top:1px solid #ede9e8;padding-top:16px;">
+      <p id="usuarioSidebar" style="font-size:11px;color:#bbb;margin:0 0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></p>
+      <a href="profile.html" style="display:block;font-size:13px;color:#666;text-decoration:none;padding:7px 0;">👤 Mi Perfil</a>
+      <a href="logout"       style="display:block;font-size:13px;color:#c00;text-decoration:none;padding:7px 0;">→ Cerrar sesión</a>
     </div>
   </aside>
 
-  <main class="flex-1 p-8">
+  <!-- ══ MAIN ══ -->
+  <main class="main">
+    <div style="max-width:640px;">
 
-    <div class="flex justify-between mb-8">
-      <h1 class="text-3xl font-headline text-red-700">Universidad Nacional</h1>
-      <span id="usuario" class="text-gray-600"></span>
-    </div>
-
-    <div id="mensaje" class="mb-6 font-bold min-h-[24px]"></div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-      <div class="lg:col-span-8 bg-white p-6 rounded-xl shadow">
-        <div class="flex justify-between mb-4">
-          <button type="button" onclick="cambiarMes(-1)" class="text-red-700 hover:text-red-900">⬅</button>
-          <h2 id="mesActual" class="font-headline text-xl"></h2>
-          <button type="button" onclick="cambiarMes(1)" class="text-red-700 hover:text-red-900">➡</button>
-        </div>
-
-        <div class="calendar-grid font-bold mb-2 text-center text-sm text-gray-600">
-          <div>Dom</div>
-          <div>Lun</div>
-          <div>Mar</div>
-          <div>Mié</div>
-          <div>Jue</div>
-          <div>Vie</div>
-          <div>Sáb</div>
-        </div>
-
-        <div id="calendario" class="calendar-grid"></div>
+      <!-- Header -->
+      <div style="margin-bottom:28px;">
+        <p style="font-size:12px;color:#bbb;margin:0 0 4px;text-transform:uppercase;letter-spacing:.06em;">Nueva reservación</p>
+        <h1 class="font-headline" style="font-size:28px;color:#9e0000;margin:0;">Auditorio Principal</h1>
+        <p style="font-size:13px;color:#aaa;margin:4px 0 0;">Universidad Nacional · Capacidad 200 personas</p>
       </div>
 
-      <div class="lg:col-span-4 bg-white p-6 rounded-xl shadow">
+      <!-- Notification -->
+      <div id="notif" class="notif"></div>
 
-        <form id="reservaForm" action="ReservationServlet" method="POST" onsubmit="return validarYEnviar(event)">
-          <input type="hidden" name="date" id="fecha">
+      <!-- ── PANEL 1: Fecha ── -->
+      <div class="panel active card" id="panel1">
+        <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">¿Cuándo es el evento?</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Seleccioná una fecha futura disponible.</p>
 
-          <label class="block text-sm font-bold mb-1 text-gray-700">Hora inicio</label>
-          <input type="time" name="start_time" id="start_time"
-                 class="w-full border p-3 mb-3 rounded" required>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <button class="btn-out" style="padding:7px 14px;font-size:13px;" onclick="cambiarMes(-1)">← Ant.</button>
+          <span class="font-headline" style="font-size:17px;color:#333;" id="mesActual"></span>
+          <button class="btn-out" style="padding:7px 14px;font-size:13px;" onclick="cambiarMes(1)">Sig. →</button>
+        </div>
 
-          <label class="block text-sm font-bold mb-1 text-gray-700">Hora fin</label>
-          <input type="time" name="end_time" id="end_time"
-                 class="w-full border p-3 mb-3 rounded" required>
+        <div class="cal-grid" style="margin-bottom:8px;">
+          <div class="cal-head">Do</div><div class="cal-head">Lu</div><div class="cal-head">Ma</div>
+          <div class="cal-head">Mi</div><div class="cal-head">Ju</div><div class="cal-head">Vi</div>
+          <div class="cal-head">Sa</div>
+        </div>
+        <div class="cal-grid" id="calendario"></div>
 
-          <label class="block text-sm font-bold mb-1 text-gray-700">Cantidad de asistentes</label>
-          <input type="number" name="quantity" id="quantity"
-                 class="w-full border p-3 mb-3 rounded" required min="1" max="200">
+        <p id="fechaLabel" style="font-size:13px;color:#9e0000;font-weight:600;margin:14px 0 0;min-height:20px;text-align:center;"></p>
 
-          <label class="block text-sm font-bold mb-2 text-gray-700 mt-4">Equipamiento audiovisual</label>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+          <button class="btn-red" id="btn1" onclick="goStep(2)" disabled>Continuar →</button>
+        </div>
+      </div>
 
-          <div class="space-y-3 mb-4">
+      <!-- ── PANEL 2: Horario ── -->
+      <div class="panel card" id="panel2">
+        <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">¿A qué hora?</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;" id="p2fecha"></p>
 
-            <div class="border rounded p-3 bg-gray-50">
-              <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
-                <input type="checkbox" name="equipment" value="1" class="equipment-check">
-                Proyector
-                <span class="text-gray-500 font-normal">(2 disponibles)</span>
-              </label>
-              <input type="number" name="eqQty_1" id="eqQty_1"
-                     class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
-                     value="0" min="0" max="2" disabled>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div>
+            <label class="inp-label">Hora de inicio</label>
+            <input type="time" id="start_time" class="inp" onchange="validateStep2()">
+          </div>
+          <div>
+            <label class="inp-label">Hora de finalización</label>
+            <input type="time" id="end_time" class="inp" onchange="validateStep2()">
+          </div>
+        </div>
+
+        <p id="durLabel" style="font-size:13px;text-align:center;min-height:18px;margin-bottom:14px;"></p>
+
+        <div>
+          <p style="font-size:11px;color:#bbb;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Horarios frecuentes</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="preset" onclick="setT('07:00','09:00')">7:00 – 9:00</button>
+            <button class="preset" onclick="setT('08:00','10:00')">8:00 – 10:00</button>
+            <button class="preset" onclick="setT('10:00','12:00')">10:00 – 12:00</button>
+            <button class="preset" onclick="setT('13:00','15:00')">13:00 – 15:00</button>
+            <button class="preset" onclick="setT('15:00','17:00')">15:00 – 17:00</button>
+            <button class="preset" onclick="setT('18:00','20:00')">18:00 – 20:00</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn-out" onclick="goStep(1)">← Atrás</button>
+          <button class="btn-red" id="btn2" onclick="goStep(3)" disabled>Continuar →</button>
+        </div>
+      </div>
+
+      <!-- ── PANEL 3: Detalles ── -->
+      <div class="panel card" id="panel3">
+        <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">Asistentes y equipamiento</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">¿Cuántas personas y qué necesitás?</p>
+
+        <!-- Asistentes -->
+        <div style="margin-bottom:24px;">
+          <label class="inp-label">Cantidad de asistentes</label>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="qb" style="width:36px;height:36px;font-size:20px;" onclick="dq(-10)">−</button>
+            <input type="number" id="quantity" value="1" min="1" max="200"
+              class="inp" style="width:90px;text-align:center;" oninput="updateBar()">
+            <button class="qb" style="width:36px;height:36px;font-size:20px;" onclick="dq(10)">+</button>
+            <span style="font-size:12px;color:#bbb;">máx. 200</span>
+          </div>
+          <div style="background:#f0eeec;border-radius:99px;height:6px;margin-top:10px;overflow:hidden;">
+            <div id="capBar" style="height:6px;border-radius:99px;background:#9e0000;width:0.5%;transition:width .3s;"></div>
+          </div>
+          <p id="capTxt" style="font-size:12px;color:#bbb;margin:4px 0 0;"></p>
+        </div>
+
+        <!-- Equipamiento -->
+        <div>
+          <label class="inp-label">Equipamiento audiovisual <span style="font-weight:400;color:#bbb;">(opcional)</span></label>
+
+          <div class="eq-card" id="ec1" onclick="toggleEq(1)">
+            <div class="eq-icon">🎥</div>
+            <div style="flex:1;">
+              <p style="margin:0;font-size:14px;font-weight:600;color:#333;">Proyector</p>
+              <p style="margin:2px 0 0;font-size:12px;color:#bbb;">Hasta 2 unidades</p>
+              <div class="eq-qty" id="er1" style="display:none;">
+                <button class="qb" onclick="chEq(event,1,-1)">−</button>
+                <span class="qdisplay" id="ed1">1</span>
+                <button class="qb" onclick="chEq(event,1,1)">+</button>
+                <input type="hidden" id="eqQty_1" value="0">
+              </div>
             </div>
-
-            <div class="border rounded p-3 bg-gray-50">
-              <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
-                <input type="checkbox" name="equipment" value="2" class="equipment-check">
-                Micrófono
-                <span class="text-gray-500 font-normal">(5 disponibles)</span>
-              </label>
-              <input type="number" name="eqQty_2" id="eqQty_2"
-                     class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
-                     value="0" min="0" max="5" disabled>
-            </div>
-
-            <div class="border rounded p-3 bg-gray-50">
-              <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
-                <input type="checkbox" name="equipment" value="3" class="equipment-check">
-                Sistema de sonido
-                <span class="text-gray-500 font-normal">(3 disponibles)</span>
-              </label>
-              <input type="number" name="eqQty_3" id="eqQty_3"
-                     class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
-                     value="0" min="0" max="3" disabled>
-            </div>
-
+            <div class="check-circle" id="eck1">✓</div>
           </div>
 
-          <button type="submit" id="btnReservar"
-                  class="w-full bg-red-700 text-white p-3 rounded hover:bg-red-800 transition">
-            Reservar
-          </button>
+          <div class="eq-card" id="ec2" onclick="toggleEq(2)">
+            <div class="eq-icon">🎙️</div>
+            <div style="flex:1;">
+              <p style="margin:0;font-size:14px;font-weight:600;color:#333;">Micrófono</p>
+              <p style="margin:2px 0 0;font-size:12px;color:#bbb;">Hasta 5 unidades</p>
+              <div class="eq-qty" id="er2" style="display:none;">
+                <button class="qb" onclick="chEq(event,2,-1)">−</button>
+                <span class="qdisplay" id="ed2">1</span>
+                <button class="qb" onclick="chEq(event,2,1)">+</button>
+                <input type="hidden" id="eqQty_2" value="0">
+              </div>
+            </div>
+            <div class="check-circle" id="eck2">✓</div>
+          </div>
 
-          <p id="errorFecha" class="text-red-600 text-sm mt-2 hidden">⚠️ Seleccione una fecha válida</p>
-          <p id="loading" class="text-gray-500 text-sm mt-2 hidden">⏳ Procesando reserva...</p>
+          <div class="eq-card" id="ec3" onclick="toggleEq(3)">
+            <div class="eq-icon">🔊</div>
+            <div style="flex:1;">
+              <p style="margin:0;font-size:14px;font-weight:600;color:#333;">Sistema de sonido</p>
+              <p style="margin:2px 0 0;font-size:12px;color:#bbb;">Hasta 3 unidades</p>
+              <div class="eq-qty" id="er3" style="display:none;">
+                <button class="qb" onclick="chEq(event,3,-1)">−</button>
+                <span class="qdisplay" id="ed3">1</span>
+                <button class="qb" onclick="chEq(event,3,1)">+</button>
+                <input type="hidden" id="eqQty_3" value="0">
+              </div>
+            </div>
+            <div class="check-circle" id="eck3">✓</div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn-out" onclick="goStep(2)">← Atrás</button>
+          <button class="btn-red" onclick="goStep(4)">Continuar →</button>
+        </div>
+      </div>
+
+      <!-- ── PANEL 4: Confirmar ── -->
+      <div class="panel card" id="panel4">
+        <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">Revisá tu reservación</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Verificá los datos antes de confirmar.</p>
+
+        <div style="background:#faf9f7;border-radius:12px;padding:20px;margin-bottom:20px;">
+          <div class="sum-row"><span class="sum-lbl">📅 Fecha</span><span class="sum-val" id="sumF">—</span></div>
+          <div class="sum-row"><span class="sum-lbl">🕐 Horario</span><span class="sum-val" id="sumH">—</span></div>
+          <div class="sum-row"><span class="sum-lbl">⏱️ Duración</span><span class="sum-val" id="sumD">—</span></div>
+          <div class="sum-row"><span class="sum-lbl">👥 Asistentes</span><span class="sum-val" id="sumA">—</span></div>
+          <div class="sum-row"><span class="sum-lbl">🎛️ Equipamiento</span><span class="sum-val" id="sumE">Ninguno</span></div>
+        </div>
+
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:13px;color:#92400e;margin-bottom:20px;">
+          ⚠️ Tenés <strong>10 minutos</strong> para confirmar antes de que expire automáticamente.
+        </div>
+
+        <form id="reservaForm" action="ReservationServlet" method="POST" style="display:none;">
+          <input type="hidden" name="date" id="f_date">
+          <input type="hidden" name="start_time" id="f_start">
+          <input type="hidden" name="end_time" id="f_end">
+          <input type="hidden" name="quantity" id="f_qty">
         </form>
 
+        <div style="display:flex;justify-content:space-between;">
+          <button class="btn-out" onclick="goStep(3)">← Atrás</button>
+          <button class="btn-red" id="btnSubmit" onclick="submitForm()">✓ Confirmar reservación</button>
+        </div>
       </div>
 
     </div>
-
-    <div class="mt-8 p-4 bg-gray-100 rounded text-sm text-gray-600">
-      <strong>Estado del sistema:</strong>
-      <ul class="mt-2 space-y-1">
-        <li>• Capacidad auditorio: <span id="capacidad">200</span> personas máx.</li>
-        <li>• Equipamiento: Proyector(2), Micrófono(5), Sonido(3)</li>
-        <li>• TTL reserva temporal: 10 minutos</li>
-      </ul>
-    </div>
-
   </main>
+</div>
 
-  <script>
-    /**
-     * @fileoverview Client Reservation Dashboard.
-     *
-     * <p>This script controls the client dashboard behavior. It validates
-     * the current session, renders an interactive calendar, handles audiovisual
-     * equipment selection and validates the reservation form before submitting
-     * it to the backend.
-     *
-     * <p>The reservation is submitted to {@code ReservationServlet}, which
-     * later communicates with the socket server to process the reservation.
-     */
+<script>
+  /* ── State ── */
+  const EQ_MAX = {1:2, 2:5, 3:3};
+  const eqSel  = {1:false, 2:false, 3:false};
+  const eqQty  = {1:1, 2:1, 3:1};
+  let step = 1;
+  let selDate = '';
+  let calM = new Date().getMonth();
+  let calY = new Date().getFullYear();
 
-    /**
-     * DOM element that displays the authenticated user email.
-     * @type {HTMLElement}
-     */
-    const usuarioSpan = document.getElementById("usuario");
+  /* ── Session ── */
+  fetch('currentUser').then(r=>r.text()).then(e=>{
+    if(!e||e==='NO_SESSION'){ window.location.href='index.html'; return; }
+    document.getElementById('usuarioSidebar').textContent = e;
+  }).catch(()=>window.location.href='index.html');
 
-    /**
-     * DOM element used to display success or error messages.
-     * @type {HTMLElement}
-     */
-    const mensaje = document.getElementById("mensaje");
+  /* ── Notifications ── */
+  const URL_MSGS = {
+    ok:  ['Reservación creada. Tenés 10 min para confirmarla.','ok'],
+    busy:['Ese horario ya está ocupado.','err'],
+    busy_time:['Conflicto de horario.','err'],
+    busy_capacity:['Capacidad máxima excedida.','err'],
+    busy_equipment:['Equipamiento no disponible.','err'],
+    hour:['Hora de inicio debe ser menor que hora de fin.','err'],
+    quantity:['Cantidad debe estar entre 1 y 200.','err'],
+    past:['No se permiten fechas pasadas.','err'],
+    error:['Error interno del servidor.','err'],
+    server:['Servidor no disponible.','err'],
+  };
+  function notif(txt,cls){ const el=document.getElementById('notif'); el.innerHTML=txt; el.className='notif on '+cls; setTimeout(()=>el.className='notif',5000); }
+  const p=new URLSearchParams(location.search); const m=p.get('msg');
+  if(m&&URL_MSGS[m]) setTimeout(()=>notif(URL_MSGS[m][0],URL_MSGS[m][1]),200);
+  history.replaceState(null,'',location.pathname);
 
-    /**
-     * Hidden input that stores the selected reservation date.
-     * @type {HTMLInputElement}
-     */
-    const fecha = document.getElementById("fecha");
+  /* ── Step control ── */
+  function goStep(n){
+    if(n===2&&!selDate){ notif('Seleccioná una fecha primero.','inf'); return; }
+    if(n===3){
+      const s=document.getElementById('start_time').value;
+      const e=document.getElementById('end_time').value;
+      if(!s||!e){ notif('Ingresá hora de inicio y fin.','inf'); return; }
+      if(s>=e){ notif('La hora de inicio debe ser menor que la hora de fin.','err'); return; }
+    }
+    if(n===4){
+      const q=parseInt(document.getElementById('quantity').value);
+      if(!q||q<1||q>200){ notif('La cantidad debe estar entre 1 y 200.','err'); return; }
+      buildSummary();
+    }
+    document.getElementById('panel'+step).classList.remove('active');
+    step=n;
+    document.getElementById('panel'+step).classList.add('active');
+    updateIndicator();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
 
-    /**
-     * Message displayed when the user attempts to reserve without selecting a date.
-     * @type {HTMLElement}
-     */
-    const errorFecha = document.getElementById("errorFecha");
+  function tryGoStep(n){ if(n<=step) goStep(n); }
 
-    /**
-     * Calendar container where days are dynamically rendered.
-     * @type {HTMLElement}
-     */
-    const calendario = document.getElementById("calendario");
+  function updateIndicator(){
+    const labels=['Seleccionar fecha','Seleccionar horario','Asistentes y equipo','Confirmación'];
+    for(let i=1;i<=4;i++){
+      const num=document.getElementById('sn'+i);
+      const tit=document.getElementById('st'+i);
+      num.className='step-num';
+      tit.className='step-title';
+      if(i<step){
+        num.classList.add('done'); num.textContent='✓';
+        tit.classList.add('done');
+      } else if(i===step){
+        num.classList.add('active'); num.textContent=i;
+        tit.classList.add('active');
+      } else {
+        num.textContent=i;
+      }
+      if(i<4){
+        const conn=document.getElementById('sc'+i);
+        conn.className='step-connector'+(i<step?' done':'');
+      }
+    }
+  }
 
-    /**
-     * Header element that displays the current month and year.
-     * @type {HTMLElement}
-     */
-    const mesActual = document.getElementById("mesActual");
+  /* ── Calendar ── */
+  function renderCal(){
+    const cal=document.getElementById('calendario');
+    cal.innerHTML='';
+    const first=new Date(calY,calM,1).getDay();
+    const total=new Date(calY,calM+1,0).getDate();
+    const hoy=new Date(); hoy.setHours(0,0,0,0);
+    const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    document.getElementById('mesActual').textContent=
+      months[calM].charAt(0).toUpperCase()+months[calM].slice(1)+' '+calY;
 
-    /**
-     * Submit button used to create a reservation.
-     * @type {HTMLButtonElement}
-     */
-    const btnReservar = document.getElementById("btnReservar");
+    for(let i=0;i<first;i++){
+      const d=document.createElement('div'); d.className='cal-day'; cal.appendChild(d);
+    }
+    for(let d=1;d<=total;d++){
+      const fd=new Date(calY,calM,d); fd.setHours(0,0,0,0);
+      const past=fd<hoy;
+      const ds=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const el=document.createElement('div');
+      el.textContent=d;
+      el.className='cal-day'+(past?' past':'')+(ds===selDate?' selected':'');
+      if(!past) el.onclick=()=>pickDate(ds,el);
+      cal.appendChild(el);
+    }
+  }
 
-    /**
-     * Loading message displayed while the reservation form is being submitted.
-     * @type {HTMLElement}
-     */
-    const loading = document.getElementById("loading");
+  function pickDate(ds,el){
+    document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected'));
+    el.classList.add('selected');
+    selDate=ds;
+    const [y,m,d]=ds.split('-');
+    const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const lbl=parseInt(d)+' de '+months[parseInt(m)-1]+' de '+y;
+    document.getElementById('fechaLabel').textContent='📅 '+lbl;
+    document.getElementById('p2fecha').textContent='📅 '+lbl;
+    document.getElementById('btn1').disabled=false;
+  }
 
-    /**
-     * Maximum allowed quantity for each audiovisual equipment type.
-     *
-     * <p>Equipment IDs:
-     * <ul>
-     *   <li>{@code 1} — Proyector, maximum 2 units.</li>
-     *   <li>{@code 2} — Micrófono, maximum 5 units.</li>
-     *   <li>{@code 3} — Sistema de sonido, maximum 3 units.</li>
-     * </ul>
-     *
-     * @type {Object.<string, number>}
-     */
-    const equipmentMax = {
-      "1": 2,
-      "2": 5,
-      "3": 3
-    };
+  function cambiarMes(d){ calM+=d; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
+  renderCal();
 
-    /**
-     * Initializes equipment checkbox behavior.
-     *
-     * <p>When an equipment checkbox is selected, its quantity input is enabled
-     * and set to 1. When it is unchecked, the quantity is reset to 0 and the
-     * input is disabled again.
-     */
-    document.querySelectorAll(".equipment-check").forEach(check => {
-      check.addEventListener("change", function () {
-        const id = this.value;
-        const qtyInput = document.getElementById("eqQty_" + id);
+  /* ── Step 2 ── */
+  function validateStep2(){
+    const s=document.getElementById('start_time').value;
+    const e=document.getElementById('end_time').value;
+    const lbl=document.getElementById('durLabel');
+    const btn=document.getElementById('btn2');
+    if(s&&e&&s<e){
+      const mins=(+e.split(':')[0]*60+ +e.split(':')[1])-(+s.split(':')[0]*60+ +s.split(':')[1]);
+      lbl.textContent='Duración: '+(Math.floor(mins/60)>0?Math.floor(mins/60)+'h ':'')+(mins%60>0?mins%60+'min':'');
+      lbl.style.color='#16a34a'; btn.disabled=false;
+    } else if(s&&e){
+      lbl.textContent='La hora de inicio debe ser menor que la hora de fin.';
+      lbl.style.color='#dc2626'; btn.disabled=true;
+    } else { lbl.textContent=''; btn.disabled=true; }
+  }
+  function setT(s,e){ document.getElementById('start_time').value=s; document.getElementById('end_time').value=e; validateStep2(); }
 
-        if (this.checked) {
-          qtyInput.disabled = false;
-          qtyInput.value = 1;
-          qtyInput.min = 1;
-          qtyInput.classList.remove("bg-gray-100");
-        } else {
-          qtyInput.value = 0;
-          qtyInput.disabled = true;
-          qtyInput.classList.add("bg-gray-100");
-        }
-      });
+  /* ── Step 3 ── */
+  function dq(d){ const inp=document.getElementById('quantity'); inp.value=Math.max(1,Math.min(200,parseInt(inp.value||1)+d)); updateBar(); }
+  function updateBar(){
+    const q=parseInt(document.getElementById('quantity').value)||0;
+    const p=Math.max(0.5,(q/200)*100);
+    document.getElementById('capBar').style.width=p+'%';
+    document.getElementById('capTxt').textContent=q>=1&&q<=200?q+' de 200 ('+Math.round(p)+'%)':'';
+  }
+  updateBar();
+
+  function toggleEq(id){
+    eqSel[id]=!eqSel[id];
+    document.getElementById('ec'+id).classList.toggle('sel',eqSel[id]);
+    document.getElementById('er'+id).style.display=eqSel[id]?'flex':'none';
+    document.getElementById('eqQty_'+id).value=eqSel[id]?eqQty[id]:0;
+  }
+  function chEq(e,id,d){ e.stopPropagation(); eqQty[id]=Math.max(1,Math.min(EQ_MAX[id],eqQty[id]+d)); document.getElementById('ed'+id).textContent=eqQty[id]; document.getElementById('eqQty_'+id).value=eqSel[id]?eqQty[id]:0; }
+
+  /* ── Summary ── */
+  function buildSummary(){
+    const [y,m,d]=selDate.split('-');
+    const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    document.getElementById('sumF').textContent=parseInt(d)+' de '+months[parseInt(m)-1]+' de '+y;
+    const s=document.getElementById('start_time').value;
+    const e=document.getElementById('end_time').value;
+    document.getElementById('sumH').textContent=s+' – '+e;
+    const mins=(+e.split(':')[0]*60+ +e.split(':')[1])-(+s.split(':')[0]*60+ +s.split(':')[1]);
+    document.getElementById('sumD').textContent=(Math.floor(mins/60)>0?Math.floor(mins/60)+'h ':'')+(mins%60>0?mins%60+'min':'');
+    document.getElementById('sumA').textContent=document.getElementById('quantity').value+' personas';
+    const names={1:'Proyector',2:'Micrófono',3:'Sonido'};
+    const parts=[];
+    [1,2,3].forEach(id=>{ if(eqSel[id]) parts.push(names[id]+'×'+eqQty[id]); });
+    document.getElementById('sumE').textContent=parts.length?parts.join(', '):'Ninguno';
+  }
+
+  /* ── Submit ── */
+  function submitForm(){
+    const btn=document.getElementById('btnSubmit');
+    btn.disabled=true; btn.textContent='⏳ Procesando...';
+    document.getElementById('f_date').value=selDate;
+    document.getElementById('f_start').value=document.getElementById('start_time').value;
+    document.getElementById('f_end').value=document.getElementById('end_time').value;
+    document.getElementById('f_qty').value=document.getElementById('quantity').value;
+    const form=document.getElementById('reservaForm');
+    document.querySelectorAll('.dynEq').forEach(e=>e.remove());
+    [1,2,3].forEach(id=>{
+      if(eqSel[id]){
+        const a=document.createElement('input'); a.type='hidden'; a.name='equipment'; a.value=id; a.className='dynEq';
+        const b=document.createElement('input'); b.type='hidden'; b.name='eqQty_'+id; b.value=eqQty[id]; b.className='dynEq';
+        form.appendChild(a); form.appendChild(b);
+      }
     });
-
-    /**
-     * Verifies whether there is an active user session.
-     *
-     * <p>The dashboard requires an authenticated user. The current user is
-     * obtained from the {@code currentUser} servlet. If no session exists, the
-     * user is redirected to the login page.
-     */
-    fetch("currentUser")
-      .then(r => r.text())
-      .then(u => {
-        if (u && u !== "NO_SESSION") {
-          usuarioSpan.innerText = "👤 " + u;
-        } else {
-          window.location.href = "index.html";
-        }
-      })
-      .catch(() => {
-        window.location.href = "index.html";
-      });
-
-    /**
-     * URL parameters used to read backend response messages.
-     * @type {URLSearchParams}
-     */
-    const params = new URLSearchParams(window.location.search);
-
-    /**
-     * Reservation result message code returned by the backend.
-     * @type {string|null}
-     */
-    const msg = params.get("msg");
-
-    /**
-     * Mapping of backend message codes to user-friendly messages.
-     *
-     * <p>These messages are displayed after reservation attempts, validation
-     * failures, server errors or authorization issues.
-     *
-     * @type {Object.<string, string>}
-     */
-    const errorMsg = {
-      "ok": "✅ Reserva creada exitosamente",
-      "busy": "⚠️ Horario ya ocupado",
-      "busy_time": "⚠️ Conflicto de horario",
-      "busy_capacity": "⚠️ Capacidad máxima excedida",
-      "busy_equipment": "⚠️ Equipamiento no disponible",
-      "hour": "⚠️ Hora de inicio debe ser menor que hora fin",
-      "quantity": "⚠️ Cantidad debe estar entre 1 y 200",
-      "past": "⚠️ No se permiten fechas pasadas",
-      "error": "❌ Error interno del servidor",
-      "server": "❌ Servidor no disponible",
-      "unauthorized": "❌ Sesión no válida"
-    };
-
-    if (msg && errorMsg[msg]) {
-      mensaje.innerHTML = `<span class="${msg === 'ok' ? 'text-green-600' : 'text-red-600'}">${errorMsg[msg]}</span>`;
-      history.replaceState(null, null, window.location.pathname);
-    }
-
-    /**
-     * Validates the reservation form before submitting it.
-     *
-     * <p>The method prevents invalid reservations from being sent to the
-     * server. It checks that a date was selected, that the date is not in the
-     * past, that the start time is before the end time, that the attendee
-     * quantity is within the allowed range, and that equipment quantities are
-     * valid.
-     *
-     * <p>If all validations pass, the reservation button is disabled, a loading
-     * indicator is shown, and the form is submitted to {@code ReservationServlet}.
-     *
-     * @param {Event} e the form submission event
-     * @returns {boolean} {@code true} if the form is submitted;
-     *                    {@code false} if validation fails
-     */
-    function validarYEnviar(e) {
-      e.preventDefault();
-
-      if (!fecha.value) {
-        errorFecha.classList.remove("hidden");
-        return false;
-      }
-
-      errorFecha.classList.add("hidden");
-
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-
-      const fechaSeleccionada = new Date(fecha.value + "T00:00:00");
-
-      if (fechaSeleccionada < hoy) {
-        mensaje.innerHTML = "<span class='text-red-600'>❌ No se permiten fechas pasadas</span>";
-        return false;
-      }
-
-      const start = document.getElementById("start_time").value;
-      const end = document.getElementById("end_time").value;
-
-      if (start >= end) {
-        mensaje.innerHTML = "<span class='text-red-600'>❌ Hora de inicio debe ser menor que hora fin</span>";
-        return false;
-      }
-
-      const qty = parseInt(document.getElementById("quantity").value);
-
-      if (qty <= 0 || qty > 200) {
-        mensaje.innerHTML = "<span class='text-red-600'>❌ Cantidad debe estar entre 1 y 200</span>";
-        return false;
-      }
-
-      const selectedEquipments = document.querySelectorAll(".equipment-check:checked");
-
-      for (const check of selectedEquipments) {
-        const id = check.value;
-        const qtyInput = document.getElementById("eqQty_" + id);
-        const qtyEq = parseInt(qtyInput.value || "0");
-        const maxEq = equipmentMax[id];
-
-        if (qtyEq < 1 || qtyEq > maxEq) {
-          mensaje.innerHTML =
-            `<span class='text-red-600'>❌ Cantidad inválida para equipo. Máximo permitido: ${maxEq}</span>`;
-          return false;
-        }
-      }
-
-      btnReservar.disabled = true;
-      btnReservar.classList.add("loading");
-      loading.classList.remove("hidden");
-      mensaje.innerHTML = "";
-
-      document.getElementById("reservaForm").submit();
-      return true;
-    }
-
-    /**
-     * Current displayed month in the calendar.
-     * @type {number}
-     */
-    let mes = new Date().getMonth();
-
-    /**
-     * Current displayed year in the calendar.
-     * @type {number}
-     */
-    let anio = new Date().getFullYear();
-
-    /**
-     * Generates and renders the monthly calendar.
-     *
-     * <p>The calendar displays all days of the current month. Past dates are
-     * visually disabled and cannot be selected. When a valid day is clicked,
-     * it is marked as selected and its date is stored in the hidden
-     * {@code fecha} input.
-     *
-     * @returns {void}
-     */
-    function generarCalendario() {
-      calendario.innerHTML = "";
-
-      const firstDay = new Date(anio, mes, 1).getDay();
-      const totalDays = new Date(anio, mes + 1, 0).getDate();
-
-      mesActual.innerText = new Date(anio, mes).toLocaleDateString("es", {
-        month: "long",
-        year: "numeric"
-      });
-
-      for (let i = 0; i < firstDay; i++) {
-        calendario.innerHTML += "<div></div>";
-      }
-
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-
-      for (let d = 1; d <= totalDays; d++) {
-        const fechaDia = new Date(anio, mes, d);
-        fechaDia.setHours(0, 0, 0, 0);
-
-        const esPasada = fechaDia < hoy;
-
-        calendario.innerHTML += `
-          <div class="dia ${esPasada ? 'past-day' : ''}"
-               data-past="${esPasada}"
-               data-date="${anio}-${String(mes + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}">
-            ${d}
-          </div>`;
-      }
-
-      document.querySelectorAll(".dia").forEach(d => {
-        d.onclick = () => {
-          if (d.dataset.past === "true") {
-            mensaje.innerHTML = "<span class='text-red-600'>❌ No se permiten fechas pasadas</span>";
-            return;
-          }
-
-          document.querySelectorAll(".dia").forEach(x => x.classList.remove("selected-day"));
-          d.classList.add("selected-day");
-          fecha.value = d.dataset.date;
-          errorFecha.classList.add("hidden");
-        };
-      });
-    }
-
-    /**
-     * Changes the displayed month in the calendar.
-     *
-     * <p>A negative value moves the calendar to the previous month, while a
-     * positive value moves it to the next month. The year is adjusted when the
-     * month goes below January or above December.
-     *
-     * @param {number} delta number of months to move; usually {@code -1} or {@code 1}
-     * @returns {void}
-     */
-    function cambiarMes(delta) {
-      mes += delta;
-
-      if (mes < 0) {
-        mes = 11;
-        anio--;
-      }
-
-      if (mes > 11) {
-        mes = 0;
-        anio++;
-      }
-
-      generarCalendario();
-    }
-
-    /**
-     * Initializes the calendar when the page loads.
-     */
-    generarCalendario();
-  </script>
-
+    form.submit();
+  }
+</script>
 </body>
 </html>
