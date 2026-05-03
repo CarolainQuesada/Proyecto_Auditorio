@@ -81,6 +81,20 @@ public class ConfirmReservationServlet extends HttpServlet {
             return;
         }
 
+        // Block confirmation if less than 24 hours remain before the reservation date.
+        // The admin must act with at least 24h of margin.
+        try {
+            String reservationDate = new dao.ReservationDAO().getById(Integer.parseInt(id.trim())).getDate();
+            java.time.LocalDate resDate = java.time.LocalDate.parse(reservationDate);
+            java.time.LocalDateTime deadline = resDate.atStartOfDay().minusHours(24);
+            if (java.time.LocalDateTime.now().isAfter(deadline)) {
+                resp.sendRedirect("admin.html?msg=deadline_passed");
+                return;
+            }
+        } catch (Exception ignored) {
+            // If we can't determine the date, let the backend handle it
+        }
+
         try (
             Socket socket = new Socket("localhost", 5000);
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);

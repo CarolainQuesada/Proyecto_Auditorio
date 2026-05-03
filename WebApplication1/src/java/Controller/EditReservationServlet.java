@@ -144,6 +144,13 @@ public class EditReservationServlet extends HttpServlet {
                 return;
             }
 
+            // Block edits if less than 24 hours remain before the reservation date.
+            java.time.LocalDateTime deadline = reservationDate.atStartOfDay().minusHours(24);
+            if (java.time.LocalDateTime.now().isAfter(deadline)) {
+                response.sendRedirect("admin.html?msg=deadline_passed");
+                return;
+            }
+
             if (startTime.compareTo(endTime) >= 0) {
                 response.sendRedirect("admin.html?msg=hour");
                 return;

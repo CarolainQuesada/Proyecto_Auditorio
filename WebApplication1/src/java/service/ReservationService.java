@@ -407,6 +407,7 @@ public class ReservationService {
               .append(r.getEndTime()).append(",")
               .append(r.getQuantity()).append(",")
               .append(r.getStatus()).append(",")
+              .append(r.getTimestamp()).append(",")
               .append(equipStr).append("|");
         }
 

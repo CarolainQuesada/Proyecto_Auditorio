@@ -145,7 +145,7 @@
     </div>
 
     <!-- Step list -->
-    <ul class="steps-list" style="flex:1;">
+    <ul class="steps-list" id="stepsList" style="flex:1;visibility:hidden;opacity:0;transition:opacity 0.3s;">
       <li style="position:relative;">
         <div class="step-row" onclick="tryGoStep(1)">
           <div class="step-num active" id="sn1">1</div>
@@ -200,17 +200,51 @@
     <div style="max-width:640px;">
 
       <!-- Header -->
-      <div style="margin-bottom:28px;">
-        <p style="font-size:12px;color:#bbb;margin:0 0 4px;text-transform:uppercase;letter-spacing:.06em;">Nueva reservación</p>
-        <h1 class="font-headline" style="font-size:28px;color:#9e0000;margin:0;">Auditorio Principal</h1>
-        <p style="font-size:13px;color:#aaa;margin:4px 0 0;">Universidad Nacional · Capacidad 200 personas</p>
+      <div style="margin-bottom:28px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div>
+          <p style="font-size:12px;color:#bbb;margin:0 0 4px;text-transform:uppercase;letter-spacing:.06em;">Gestión de espacios</p>
+          <h1 class="font-headline" style="font-size:28px;color:#9e0000;margin:0;">Auditorio Principal</h1>
+          <p style="font-size:13px;color:#aaa;margin:4px 0 0;">Universidad Nacional · Capacidad 200 personas</p>
+        </div>
+
+        <!-- TTL badge — visible once reservation flow starts -->
+        <div id="ttlBadge" style="display:none;flex-shrink:0;margin-top:4px;">
+          <div id="ttlBox" style="display:flex;align-items:center;gap:8px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;padding:10px 16px;font-family:'DM Sans',sans-serif;transition:background .4s,border-color .4s;">
+
+            <div>
+              <p style="font-size:10px;font-weight:600;color:#92400e;margin:0;text-transform:uppercase;letter-spacing:.05em;">Tiempo para reservar</p>
+              <p id="ttlDisplay" style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;color:#92400e;margin:0;line-height:1.1;">10:00</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Notification -->
       <div id="notif" class="notif"></div>
 
+      <!-- ── PANEL 0: Landing — Realizar reserva ── -->
+      <div class="panel active card" id="panel0" style="text-align:center;padding:48px 32px;">
+        <p class="font-headline" style="font-size:24px;color:#1a0a0a;margin:0 0 8px;">¿Querés reservar el auditorio?</p>
+        <p style="font-size:14px;color:#aaa;margin:0 0 32px;max-width:360px;margin-left:auto;margin-right:auto;">
+          Tenés <strong>10 minutos</strong> para completar todos los pasos una vez que iniciés el proceso.
+        </p>
+
+        <div style="display:inline-flex;align-items:center;gap:12px;background:#f8f7f5;border:1px solid #ede9e8;border-radius:14px;padding:16px 24px;margin-bottom:32px;">
+          <div style="text-align:left;">
+            <p style="font-size:11px;font-weight:600;color:#bbb;margin:0;text-transform:uppercase;letter-spacing:.05em;">Tiempo disponible</p>
+            <p style="font-size:20px;font-weight:700;color:#555;margin:0;">10:00 minutos</p>
+          </div>
+        </div>
+
+        <br>
+        <button class="btn-red" style="font-size:16px;padding:14px 36px;border-radius:12px;" onclick="iniciarReserva()">
+          ▶ Realizar reserva
+        </button>
+        <p style="font-size:12px;color:#ccc;margin:16px 0 0;">El tiempo empieza al hacer clic</p>
+      </div>
+
       <!-- ── PANEL 1: Fecha ── -->
-      <div class="panel active card" id="panel1">
+      <div class="panel card" id="panel1">
         <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">¿Cuándo es el evento?</p>
         <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Seleccioná una fecha futura disponible.</p>
 
@@ -355,7 +389,7 @@
         <div style="background:#faf9f7;border-radius:12px;padding:20px;margin-bottom:20px;">
           <div class="sum-row"><span class="sum-lbl">📅 Fecha</span><span class="sum-val" id="sumF">—</span></div>
           <div class="sum-row"><span class="sum-lbl">🕐 Horario</span><span class="sum-val" id="sumH">—</span></div>
-          <div class="sum-row"><span class="sum-lbl">⏱️ Duración</span><span class="sum-val" id="sumD">—</span></div>
+          <div class="sum-row"><span class="sum-lbl">Duración</span><span class="sum-val" id="sumD">—</span></div>
           <div class="sum-row"><span class="sum-lbl">👥 Asistentes</span><span class="sum-val" id="sumA">—</span></div>
           <div class="sum-row"><span class="sum-lbl">🎛️ Equipamiento</span><span class="sum-val" id="sumE">Ninguno</span></div>
         </div>
@@ -414,6 +448,66 @@
   const p=new URLSearchParams(location.search); const m=p.get('msg');
   if(m&&URL_MSGS[m]) setTimeout(()=>notif(URL_MSGS[m][0],URL_MSGS[m][1]),200);
   history.replaceState(null,'',location.pathname);
+
+  /* ── TTL Countdown ── */
+  const TTL_DURATION = 10 * 60 * 1000;
+  let ttlInterval = null;
+
+  function iniciarReserva() {
+    document.getElementById('panel0').classList.remove('active');
+    step = 1;
+    document.getElementById('panel' + step).classList.add('active');
+    updateIndicator();
+    window.scrollTo({top:0,behavior:'smooth'});
+    startTTL();
+  }
+
+  function startTTL() {
+    const badge   = document.getElementById('ttlBadge');
+    const box     = document.getElementById('ttlBox');
+    const display = document.getElementById('ttlDisplay');
+    const icon    = document.getElementById('ttlIcon');
+    const label   = box.querySelector('p:first-child');
+
+    const startTime = Date.now();
+    badge.style.display = 'block';
+    const steps = document.getElementById('stepsList');
+    if (steps) { steps.style.visibility = 'visible'; steps.style.opacity = '1'; }
+
+    function tick() {
+      const elapsed   = Date.now() - startTime;
+      const remaining = TTL_DURATION - elapsed;
+
+      if (remaining <= 0) {
+        display.textContent   = '00:00';
+        box.style.background  = '#fff2f2';
+        box.style.borderColor = '#fecaca';
+        display.style.color   = '#991b1b';
+        label.style.color     = '#991b1b';
+        clearInterval(ttlInterval);
+        // Disable all continue buttons
+        document.querySelectorAll('.btn-red').forEach(b => {
+          b.disabled = true;
+        });
+        notif('⏰ El tiempo expiró. Tu sesión de reserva finalizó.', 'err');
+        return;
+      }
+
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      display.textContent   = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+
+      const urgent = remaining < 2 * 60 * 1000;
+      box.style.background  = urgent ? '#fff2f2'  : '#fffbeb';
+      box.style.borderColor = urgent ? '#fecaca'  : '#fde68a';
+      display.style.color   = urgent ? '#991b1b'  : '#92400e';
+      label.style.color     = urgent ? '#991b1b'  : '#92400e';
+
+    }
+
+    tick();
+    ttlInterval = setInterval(tick, 1000);
+  }
 
   /* ── Step control ── */
   function goStep(n){
@@ -494,8 +588,8 @@
     const [y,m,d]=ds.split('-');
     const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     const lbl=parseInt(d)+' de '+months[parseInt(m)-1]+' de '+y;
-    document.getElementById('fechaLabel').textContent='📅 '+lbl;
-    document.getElementById('p2fecha').textContent='📅 '+lbl;
+    document.getElementById('fechaLabel').textContent=' '+lbl;
+    document.getElementById('p2fecha').textContent=' '+lbl;
     document.getElementById('btn1').disabled=false;
   }
 
@@ -573,6 +667,7 @@
     });
     form.submit();
   }
+
 </script>
 </body>
 </html>

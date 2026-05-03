@@ -667,6 +667,12 @@ public class ReservationDAO {
         r.setQuantity(rs.getInt("quantity"));
         r.setStatus(rs.getString("status"));
 
+        // Include created_at as epoch millis so the frontend can compute TTL
+        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+        if (createdAt != null) {
+            r.setTimestamp(createdAt.getTime());
+        }
+
         return r;
     }
 }
