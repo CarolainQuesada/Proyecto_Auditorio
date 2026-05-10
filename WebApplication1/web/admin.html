@@ -14,7 +14,12 @@
       Admin: <span id="user"></span>
       <a href="logout" class="ml-4 bg-white text-red-800 px-3 py-1 rounded">Salir</a>
     </div>
-  </header>
+  </header>> 
+<div class="p-6">
+  
+  <div id="mensaje" class="mb-4"></div>
+
+  <h2 class="text-xl font-bold mb-4">Reservas Registradas</h2>
 
   <div class="p-6">
 
@@ -48,6 +53,8 @@
     <form id="formReserva" action="ReservationServlet" method="POST"
       class="bg-white p-4 rounded shadow mt-2" onsubmit="return validarAdminForm()">
 
+      <input type="hidden" name="action" value="reservar">
+      <input type="hidden" name="source" value="admin">
       <input type="hidden" id="idReserva" name="id">
 
       <label class="font-bold">Fecha</label>
@@ -216,29 +223,178 @@
     const mensaje = document.getElementById("mensaje");
 
     const mensajes = {
-      "ok":               "<div class='text-green-600'> Operación exitosa</div>",
-      "busy":             "<div class='text-red-600'> Horario ocupado</div>",
-      "busy_time":        "<div class='text-red-600'> Conflicto de horario</div>",
-      "busy_equipment":   "<div class='text-red-600'> Equipamiento no disponible</div>",
-      "busy_capacity":    "<div class='text-red-600'> Capacidad excedida</div>",
-      "hour":             "<div class='text-red-600'> Hora inválida</div>",
-      "quantity":         "<div class='text-red-600'> Cantidad inválida</div>",
-      "past":             "<div class='text-red-600'> No se permiten fechas pasadas</div>",
-      "expired":          "<div class='text-red-600'> La reserva ya expiró y no se puede confirmar</div>",
-      "ttl":              "<div class='text-blue-600'> TTL ejecutado</div>",
-      "confirmed":        "<div class='text-green-600'> Confirmada</div>",
-      "equipment_added":  "<div class='text-green-600'> Equipamiento agregado</div>",
-      "equipment_updated":"<div class='text-green-600'> Equipamiento actualizado</div>",
-      "equipment_deleted":"<div class='text-green-600'> Equipamiento eliminado</div>",
-      "error":            "<div class='text-red-600'> Error</div>",
-      "server":           "<div class='text-red-600'> Servidor no disponible</div>",
-      "unauthorized":     "<div class='text-red-600'> No autorizado</div>",
-      "deadline_passed":  "<div class='text-orange-600'> No se puede actuar: quedan menos de 24 horas para la fecha de la reserva</div>"
-    };
+  
+  "ok":
+    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 +\n\
+    rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>✅</span>" +
+    "<div>" +
+      "<p class='font-bold'>Reserva creada</p>" +
+      "<p class='text-sm'>La reserva se ha registrado exitosamente en el sistema.</p>" +
+    "</div>" +
+    "</div>",
+
+  "busy":
+    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>⚠️</span>" +
+    "<div>" +
+      "<p class='font-bold'>Horario ocupado</p>" +
+      "<p class='text-sm'>Ya existe una reserva en ese horario.</p>" +
+    "</div>" +
+    "</div>",
+
+  "busy_time":
+    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>️</span>" +
+    "<div>" +
+      "<p class='font-bold'>Conflicto de horario</p>" +
+      "<p class='text-sm'>Ese horario ya está reservado.</p>" +
+    "</div>" +
+    "</div>",
+
+  "busy_equipment":
+    "<div class='bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🎛️</span>" +
+    "<div>" +
+      "<p class='font-bold'>Equipamiento no disponible</p>" +
+      "<p class='text-sm'>Uno o más equipos ya están reservados.</p>" +
+    "</div>" +
+    "</div>",
+
+  "busy_capacity":
+    "<div class='bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🚫</span>" +
+    "<div>" +
+      "<p class='font-bold'>Capacidad excedida</p>" +
+      "<p class='text-sm'>El auditorio no tiene cupo para esa cantidad.</p>" +
+    "</div>" +
+    "</div>",
+
+  "hour":
+    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'></span>" +
+    "<div>" +
+      "<p class='font-bold'>Hora inválida</p>" +
+      "<p class='text-sm'>La hora de inicio debe ser anterior a la de fin.</p>" +
+    "</div>" +
+    "</div>",
+
+  "quantity":
+    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>👥</span>" +
+    "<div>" +
+      "<p class='font-bold'>Cantidad inválida</p>" +
+      "<p class='text-sm'>Debe estar entre 1 y 200 asistentes.</p>" +
+    "</div>" +
+    "</div>",
+
+  "past":
+    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>📅</span>" +
+    "<div>" +
+      "<p class='font-bold'>Fecha inválida</p>" +
+      "<p class='text-sm'>No se permiten reservas para fechas pasadas.</p>" +
+    "</div>" +
+    "</div>",
+
+  "expired":
+    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'></span>" +
+    "<div>" +
+      "<p class='font-bold'>Reserva expirada</p>" +
+      "<p class='text-sm'>La reserva ya expiró y no se puede confirmar.</p>" +
+    "</div>" +
+    "</div>",
+
+  "ttl":
+    "<div class='bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🔄</span>" +
+    "<div>" +
+      "<p class='font-bold'>Limpieza ejecutada</p>" +
+      "<p class='text-sm'>Se han eliminado las reservas expiradas.</p>" +
+    "</div>" +
+    "</div>",
+
+  "confirmed":
+    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>✅</span>" +
+    "<div>" +
+      "<p class='font-bold'>Confirmada</p>" +
+      "<p class='text-sm'>La reserva ha sido confirmada exitosamente.</p>" +
+    "</div>" +
+    "</div>",
+
+  "equipment_added":
+    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🎛️</span>" +
+    "<div>" +
+      "<p class='font-bold'>Equipamiento agregado</p>" +
+      "<p class='text-sm'>Se han añadido los equipos a la reserva.</p>" +
+    "</div>" +
+    "</div>",
+
+  "equipment_updated":
+    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🔄</span>" +
+    "<div>" +
+      "<p class='font-bold'>Equipamiento actualizado</p>" +
+      "<p class='text-sm'>Se han modificado los equipos de la reserva.</p>" +
+    "</div>" +
+    "</div>",
+
+  "equipment_deleted":
+    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>️</span>" +
+    "<div>" +
+      "<p class='font-bold'>Equipamiento eliminado</p>" +
+      "<p class='text-sm'>Se han removido los equipos de la reserva.</p>" +
+    "</div>" +
+    "</div>",
+
+  "error":
+    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>❌</span>" +
+    "<div>" +
+      "<p class='font-bold'>Error</p>" +
+      "<p class='text-sm'>Ocurrió un problema al procesar la solicitud.</p>" +
+    "</div>" +
+    "</div>",
+
+  "server":
+    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🔌</span>" +
+    "<div>" +
+      "<p class='font-bold'>Servidor no disponible</p>" +
+      "<p class='text-sm'>No se pudo conectar con el servidor de reservas.</p>" +
+    "</div>" +
+    "</div>",
+
+  "unauthorized":
+    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>🔒</span>" +
+    "<div>" +
+      "<p class='font-bold'>No autorizado</p>" +
+      "<p class='text-sm'>No tienes permisos para realizar esta acción.</p>" +
+    "</div>" +
+    "</div>",
+
+  "deadline_passed":
+    "<div class='bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
+    "<span class='text-2xl'>⏰</span>" +
+    "<div>" +
+      "<p class='font-bold'>Plazo vencido</p>" +
+      "<p class='text-sm'>Quedan menos de 24 horas para la fecha de la reserva.</p>" +
+    "</div>" +
+    "</div>"
+};
 
     if (msg && mensajes[msg]) {
       mensaje.innerHTML = mensajes[msg];
       history.replaceState(null, null, window.location.pathname);
+      
+      setTimeout(() => {
+          mensaje.innerHTML = '';
+      }, 5000);
     }
 
     const EQUIPMENT_NAMES = {
@@ -330,11 +486,6 @@
       return new Date() < limite;
     }
 
-    /**
-     * ✅ FIX: Esta función reemplaza el IIFE con backticks anidados que causaba
-     * que el código JS se mostrara como texto plano en la columna Acciones.
-     * Ahora usa concatenación de strings en lugar de template literals anidados.
-     */
     function renderAcciones(p) {
       var id     = p[0];
       var fecha  = p[1];

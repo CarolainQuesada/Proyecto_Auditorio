@@ -68,95 +68,55 @@ public class ClientHandler extends Thread {
      * and ensures the socket is closed when processing finishes (or if an
      * exception is thrown).
      */
-    @Override
-    public void run() {
-        String clientInfo = clientSocket.getInetAddress().getHostAddress();
+   @Override
+public void run() {
+    String clientInfo = clientSocket.getInetAddress().getHostAddress();
+    serverGUI.log("Client connected: " + clientInfo);
+    System.out.println("[SERVER] Client connected: " + clientInfo);
 
-        serverGUI.log("Client connected: " + clientInfo);
-        System.out.println("[SERVER] Client connected: " + clientInfo);
+    try (
+        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
+    ) {
+        System.out.println("[SERVER] Esperando comando de: " + clientInfo);
+        String command = in.readLine();
+        
+        System.out.println("[SERVER] Comando recibido: " + command);
 
-        try (
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
-        ) {
-            String command = in.readLine();
-
-            if (command == null || command.trim().isEmpty()) {
-                out.println("error");
-                serverGUI.log("Empty command from: " + clientInfo);
-                return;
-            }
-
-            serverGUI.log("Command from " + clientInfo + ": " + command);
-            System.out.println("[SERVER] Command received: " + command);
-
-            /*
-             * Se usa split(";", -1) para NO perder campos vacíos.
-             *
-             * Ejemplo sin equipo:
-             * RESERVE;juan@una.ac.cr;2026-04-30;08:00;10:00;80;;
-             *
-             * Con split normal Java elimina los campos vacíos finales.
-             */
-            String[] parts = command.split(";", -1);
-
-            if (parts.length == 0 || parts[0].trim().isEmpty()) {
-                out.println("error");
-                serverGUI.log("Invalid command from: " + clientInfo);
-                return;
-            }
-
-            String action = parts[0].trim().toUpperCase();
-
-            switch (action) {
-                case "RESERVE":
-                    handleReserve(parts, out);
-                    break;
-
-                case "EDIT":
-                    handleEdit(parts, out);
-                    break;
-
-                case "CONFIRM":
-                    handleConfirm(parts, out);
-                    break;
-
-                case "DELETE":
-                    handleDelete(parts, out);
-                    break;
-
-                case "LIST":
-                    handleList(out);
-                    break;
-
-                case "MY_RESERVATIONS":
-                    handleMyReservations(parts, out);
-                    break;
-
-                case "CANCEL":
-                    handleCancel(parts, out);
-                    break;
-
-                default:
-                    out.println("error");
-                    serverGUI.log("Unknown command from " + clientInfo + ": " + action);
-                    break;
-            }
-
-        } catch (IOException e) {
-            serverGUI.log("Error with client " + clientInfo + ": " + e.getMessage());
-            System.err.println("[SERVER] Error with client " + clientInfo + ": " + e.getMessage());
-
-        } finally {
-            try {
-                clientSocket.close();
-                serverGUI.log("Client disconnected: " + clientInfo);
-                System.out.println("[SERVER] Client disconnected: " + clientInfo);
-
-            } catch (IOException ignored) {
-            }
+        if (command == null || command.isEmpty()) {
+            System.err.println("[SERVER] Comando vacío o null de: " + clientInfo);
+            out.println("ERROR: Empty command");
+            serverGUI.log("Empty command from: " + clientInfo);
+            return;
         }
+
+        serverGUI.log("Command from " + clientInfo + ": " + command);
+        System.out.println("[SERVER] Command received: " + command);
+
+        String[] parts = command.split(";");
+        String action = parts[0].toUpperCase();
+        
+        System.out.println("[SERVER] Acción: " + action);
+
+        switch (action) {
+            case "RESERVE":
+                System.out.println("[SERVER] Llamando a handleReserve...");
+                handleReserve(parts, out);
+                break;
+            // ... resto del switch
+        }
+
+    } catch (IOException e) {
+        System.err.println("[SERVER] ERROR en client " + clientInfo + ": " + e.getMessage());
+        e.printStackTrace();  // ← ESTO ES CLAVE
+        serverGUI.log("Error with client " + clientInfo + ": " + e.getMessage());
+    } finally {
+        try {
+            clientSocket.close();
+            serverGUI.log("Client disconnected: " + clientInfo);
+        } catch (IOException ignored) {}
     }
+}
 
     /**
      * Processes a {@code RESERVE} command sent by the client.
@@ -457,10 +417,7 @@ public class ClientHandler extends Thread {
      */
     private void handleDelete(String[] parts, PrintWriter out) {
         try {
-            /*
-             * Formato:
-             * DELETE;id
-             */
+           
             if (parts.length < 2 || parts[1].trim().isEmpty()) {
                 out.println("error");
                 serverGUI.log("DELETE rejected: missing id");
