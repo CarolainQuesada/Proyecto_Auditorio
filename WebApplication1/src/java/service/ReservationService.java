@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import model.Reservation;
 import model.ReservationEquipment;
 import java.util.List;
-
+import java.sql.SQLException;  
 /**
  * Service layer responsible for applying business rules related to reservations.
  *
@@ -47,6 +47,13 @@ public class ReservationService {
      * Singleton audit log used to register reservation-related events.
      */
     private final SystemLog log = SystemLog.getInstance();
+ 
+    private final ReservationDAO reservationDAO;
+    
+    public ReservationService() {
+        this.reservationDAO = new ReservationDAO();
+    }
+    
 
     /**
      * Creates a new reservation with one or more audiovisual equipment items.
@@ -74,52 +81,21 @@ public class ReservationService {
      * @param equipments list of equipment items requested for the reservation
      * @return a status code indicating the result of the operation
      */
-    public String createReservationWithEquipment(String user, String date, String startTime,
-            String endTime, int quantity, List<ReservationEquipment> equipments) {
-
-        CalendarLock.lock();
-
+    
+    public String createReservationWithEquipment(String user, String date, String startTime, 
+                                                  String endTime, int quantity, 
+                                                  List<ReservationEquipment> equipments) {
         try {
-            if (startTime.compareTo(endTime) >= 0) {
-                log.log(user, "RESERVE_REJECT", "Hora inválida: " + startTime + "-" + endTime);
-                return "hour";
-            }
-
-            if (!CapacityControl.isValidCapacity(quantity)) {
-                log.log(user, "RESERVE_REJECT", "Cantidad inválida: " + quantity);
-                return "quantity";
-            }
-
-            String equipmentValidation = validateEquipments(equipments);
-
-            if (!"ok".equals(equipmentValidation)) {
-                log.log(user, "RESERVE_REJECT", "Equipamiento inválido: " + equipmentValidation);
-                return "busy_equipment";
-            }
-
-            if (dao.existsOverlap(date, startTime, endTime)) {
-                log.log(user, "RESERVE_REJECT",
-                        "Horario ocupado: " + date + " " + startTime + "-" + endTime);
-                return "busy_time";
-            }
-
-            boolean ok = dao.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
-
-            if (ok) {
-                log.log(user, "RESERVE_OK",
-                        "Reserva creada: " + date + " " + startTime + "-" + endTime
-                        + " Asistentes: " + quantity);
-            } else {
-                log.log(user, "RESERVE_ERROR",
-                        "Error al crear reserva: " + date + " " + startTime + "-" + endTime);
-            }
-
-            return ok ? "created" : "error";
-
-        } finally {
-            CalendarLock.unlock();
+            String result = reservationDAO.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
+            return result;
+            
+        } catch (Exception e) {
+            System.err.println("[Service] Error general: " + e.getMessage());
+            e.printStackTrace();
+            return "error";
         }
     }
+    
 
     /**
      * Creates a new reservation without using the multi-equipment list.

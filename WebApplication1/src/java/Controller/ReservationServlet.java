@@ -98,12 +98,10 @@ public class ReservationServlet extends HttpServlet {
                 }
             }
 
-            // Construir comando
             String command = String.format("RESERVE;%s;%s;%s;%s;%d;%s;%s",
                     usuario, fecha, horaInicio, horaFin, cantidad,
                     eqIds.toString(), eqQtys.toString());
 
-            // 🔍 LOGS EXTREMOS PARA DEPURAR
             System.out.println("\n" + "=".repeat(60));
             System.out.println("🔍 DEBUG SERVLET - COMANDO A ENVIAR");
             System.out.println("Usuario: [" + usuario + "]");
@@ -125,6 +123,7 @@ public class ReservationServlet extends HttpServlet {
                 else if ("busy_time".equals(resultado)) msg = "busy_time";
                 else if ("busy_equipment".equals(resultado)) msg = "busy_equipment";
                 else if ("busy_capacity".equals(resultado)) msg = "busy_capacity";
+                else if ("blocked_date".equals(resultado)) msg = "blocked_date";
                 else if ("quantity".equals(resultado)) msg = "quantity";
                 else if ("hour".equals(resultado)) msg = "hour";
                 else if ("past".equals(resultado)) msg = "past";

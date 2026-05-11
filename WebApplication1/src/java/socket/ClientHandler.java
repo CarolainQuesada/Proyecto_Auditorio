@@ -68,55 +68,90 @@ public class ClientHandler extends Thread {
      * and ensures the socket is closed when processing finishes (or if an
      * exception is thrown).
      */
-   @Override
-public void run() {
-    String clientInfo = clientSocket.getInetAddress().getHostAddress();
-    serverGUI.log("Client connected: " + clientInfo);
-    System.out.println("[SERVER] Client connected: " + clientInfo);
+    @Override
+    public void run() {
+        String clientInfo = clientSocket.getInetAddress().getHostAddress();
+        serverGUI.log("Client connected: " + clientInfo);
+        System.out.println("[SERVER] Client connected: " + clientInfo);
 
-    try (
-        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
-    ) {
-        System.out.println("[SERVER] Esperando comando de: " + clientInfo);
-        String command = in.readLine();
-        
-        System.out.println("[SERVER] Comando recibido: " + command);
+        try (
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
+        ) {
+            System.out.println("[SERVER] Esperando comando de: " + clientInfo);
+            String command = in.readLine();
 
-        if (command == null || command.isEmpty()) {
-            System.err.println("[SERVER] Comando vacío o null de: " + clientInfo);
-            out.println("ERROR: Empty command");
-            serverGUI.log("Empty command from: " + clientInfo);
-            return;
+            System.out.println("[SERVER] Comando recibido: [" + command + "]");
+
+            if (command == null || command.isEmpty()) {
+                System.err.println("[SERVER] Comando vacío o null de: " + clientInfo);
+                out.println("ERROR: Empty command");
+                serverGUI.log("Empty command from: " + clientInfo);
+                return;
+            }
+
+            serverGUI.log("Command from " + clientInfo + ": " + command);
+            System.out.println("[SERVER] Command received: " + command);
+
+            String[] parts = command.split(";", -1); // ← IMPORTANTE: -1 para preservar campos vacíos
+            String action = parts[0].toUpperCase().trim();
+
+            System.out.println("[SERVER] Acción: " + action);
+
+            switch (action) {
+                case "RESERVE":
+                    System.out.println("[SERVER] Llamando a handleReserve...");
+                    handleReserve(parts, out);
+                    break;
+
+                case "EDIT":
+                    System.out.println("[SERVER] Llamando a handleEdit...");
+                    handleEdit(parts, out);
+                    break;
+
+                case "CONFIRM":
+                    System.out.println("[SERVER] Llamando a handleConfirm...");
+                    handleConfirm(parts, out);
+                    break;
+
+                case "DELETE":
+                    System.out.println("[SERVER] Llamando a handleDelete...");
+                    handleDelete(parts, out);
+                    break;
+
+                case "LIST":
+                    System.out.println("[SERVER] Llamando a handleList...");
+                    handleList(out);  // ← ¡ESTO FALTABA!
+                    break;
+
+                case "MY_RESERVATIONS":
+                    System.out.println("[SERVER] Llamando a handleMyReservations...");
+                    handleMyReservations(parts, out);
+                    break;
+
+                case "CANCEL":
+                    System.out.println("[SERVER] Llamando a handleCancel...");
+                    handleCancel(parts, out);
+                    break;
+
+                default:
+                    System.err.println("[SERVER] Acción desconocida: " + action);
+                    out.println("ERROR: Unknown action");
+                    serverGUI.log("Unknown action from " + clientInfo + ": " + action);
+                    break;
+            }
+
+        } catch (IOException e) {
+            System.err.println("[SERVER] ERROR en client " + clientInfo + ": " + e.getMessage());
+            e.printStackTrace();
+            serverGUI.log("Error with client " + clientInfo + ": " + e.getMessage());
+        } finally {
+            try {
+                clientSocket.close();
+                serverGUI.log("Client disconnected: " + clientInfo);
+            } catch (IOException ignored) {}
         }
-
-        serverGUI.log("Command from " + clientInfo + ": " + command);
-        System.out.println("[SERVER] Command received: " + command);
-
-        String[] parts = command.split(";");
-        String action = parts[0].toUpperCase();
-        
-        System.out.println("[SERVER] Acción: " + action);
-
-        switch (action) {
-            case "RESERVE":
-                System.out.println("[SERVER] Llamando a handleReserve...");
-                handleReserve(parts, out);
-                break;
-            // ... resto del switch
-        }
-
-    } catch (IOException e) {
-        System.err.println("[SERVER] ERROR en client " + clientInfo + ": " + e.getMessage());
-        e.printStackTrace();  // ← ESTO ES CLAVE
-        serverGUI.log("Error with client " + clientInfo + ": " + e.getMessage());
-    } finally {
-        try {
-            clientSocket.close();
-            serverGUI.log("Client disconnected: " + clientInfo);
-        } catch (IOException ignored) {}
     }
-}
 
     /**
      * Processes a {@code RESERVE} command sent by the client.
@@ -142,13 +177,6 @@ public void run() {
      */
     private void handleReserve(String[] parts, PrintWriter out) {
         try {
-            /*
-             * Formato esperado:
-             * RESERVE;usuario;fecha;inicio;fin;cantidad;equipos;cantidades
-             *
-             * Ejemplo:
-             * RESERVE;juan@una.ac.cr;2026-04-30;08:00;10:00;80;1,2,3;1,2,1
-             */
             if (parts.length < 6) {
                 out.println("error");
                 serverGUI.log("RESERVE rejected: insufficient parameters");
@@ -457,19 +485,28 @@ public void run() {
      * @param out the writer connected to the client socket
      */
     private void handleList(PrintWriter out) {
-        try {
-            serverGUI.log("List reservations request");
+    try {
+        System.out.println("[ClientHandler] 📋 handleList: Iniciando consulta...");
+        long start = System.currentTimeMillis();
+        
+        serverGUI.log("List reservations request");
 
-            String resultado = reservationService.listReservations();
+        String resultado = reservationService.listReservations();
+        
+        long queryTime = System.currentTimeMillis() - start;
+        System.out.println("[ClientHandler] 📋 handleList: Consulta completada en " + queryTime + "ms");
+        System.out.println("[ClientHandler] 📦 Tamaño datos: " + (resultado != null ? resultado.length() : 0) + " caracteres");
 
-            out.println(resultado);
+        out.println(resultado);
+        out.flush(); 
 
-        } catch (Exception e) {
-            out.println("ERROR: " + e.getMessage());
-            serverGUI.log("LIST error: " + e.getMessage());
-            e.printStackTrace();
-        }
+    } catch (Exception e) {
+        System.err.println("[ClientHandler] ❌ LIST error: " + e.getMessage());
+        e.printStackTrace();
+        out.println("ERROR: " + e.getMessage());
+        serverGUI.log("LIST error: " + e.getMessage());
     }
+}
 
     /**
      * Returns {@code true} if the given equipment ID is recognised by this
