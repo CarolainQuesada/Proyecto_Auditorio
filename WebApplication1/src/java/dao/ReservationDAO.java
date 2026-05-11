@@ -315,6 +315,40 @@ public class ReservationDAO {
     }
 
     /**
+     * Retrieves pending reservations that have exceeded the TTL window,
+     * including their associated equipment.
+     *
+     * @param ttlMinutes the time-to-live threshold in minutes
+     * @return expired pending reservations with equipment loaded
+     */
+    public List<Reservation> getPendingExpiredWithEquipment(int ttlMinutes) {
+        List<Reservation> list = new ArrayList<>();
+
+        String sql = "SELECT * FROM reservations "
+                + "WHERE status = 'PENDING' "
+                + "AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, ttlMinutes);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Reservation reservation = mapReservation(rs);
+                    reservation.setEquipments(equipmentDAO.getByReservationId(reservation.getId()));
+                    list.add(reservation);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] getPendingExpiredWithEquipment: " + e.getMessage());
+        }
+
+        return list;
+    }
+
+    /**
      * Retrieves a single reservation by its primary key.
      *
      * @param id the reservation ID

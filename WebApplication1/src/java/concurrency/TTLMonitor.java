@@ -1,6 +1,6 @@
 package concurrency;
 
-import dao.ReservationDAO;
+import service.ReservationService;
 import socket.ServerGUI;
 
 /**
@@ -9,9 +9,9 @@ import socket.ServerGUI;
  *
  * <p>Once started, this thread runs an infinite loop that:
  * <ol>
- *   <li>Calls {@link ReservationDAO#cleanExpired(int)} to mark all
- *       {@code PENDING} reservations older than {@value #TTL_MINUTES} minutes
- *       as {@code EXPIRED} in the database.</li>
+ *   <li>Calls {@link ReservationService#expirePendingReservations(int)} to
+ *       mark old {@code PENDING} reservations as {@code EXPIRED} and release
+ *       their equipment permits.</li>
  *   <li>Logs the number of expired reservations to both the server GUI and
  *       the {@link SystemLog}.</li>
  *   <li>Sleeps for 60 seconds before the next check.</li>
@@ -24,12 +24,12 @@ import socket.ServerGUI;
  *
  * <p>Example usage (from {@code ServerGUI}):
  * <pre>{@code
- * TTLMonitor monitor = new TTLMonitor(gui);
+ * TTLMonitor monitor = new TTLMonitor(gui, reservationService);
  * monitor.setDaemon(true);
  * monitor.start();
  * }</pre>
  *
- * @see ReservationDAO#cleanExpired(int)
+ * @see ReservationService#expirePendingReservations(int)
  * @see SystemLog
  */
 public class TTLMonitor extends Thread {
@@ -40,6 +40,11 @@ public class TTLMonitor extends Thread {
     private final ServerGUI gui;
 
     /**
+     * Reservation service used to expire reservations and release resources.
+     */
+    private final ReservationService reservationService;
+
+    /**
      * Number of minutes after which a {@code PENDING} reservation is
      * automatically transitioned to {@code EXPIRED} status.
      */
@@ -48,11 +53,12 @@ public class TTLMonitor extends Thread {
     /**
      * Constructs a new {@code TTLMonitor} bound to the given server GUI.
      *
-     * @param gui the {@link ServerGUI} instance used to display log messages;
-     *            must not be {@code null}
+     * @param gui the {@link ServerGUI} instance used to display log messages
+     * @param reservationService service that performs TTL expiration
      */
-    public TTLMonitor(ServerGUI gui) {
+    public TTLMonitor(ServerGUI gui, ReservationService reservationService) {
         this.gui = gui;
+        this.reservationService = reservationService;
     }
 
     /**
@@ -61,8 +67,8 @@ public class TTLMonitor extends Thread {
      * <p>Runs indefinitely until the thread is interrupted (e.g., when the
      * server is stopped). On each iteration:
      * <ul>
-     *   <li>Invokes {@link ReservationDAO#cleanExpired(int)} with the
-     *       configured TTL.</li>
+     *   <li>Invokes {@link ReservationService#expirePendingReservations(int)}
+     *       with the configured TTL.</li>
      *   <li>Logs the count of expired reservations if any were found.</li>
      *   <li>Sleeps for 60 000 ms (1 minute) before the next cycle.</li>
      * </ul>
@@ -76,7 +82,7 @@ public class TTLMonitor extends Thread {
             try {
                 gui.log("TTL running... expiration threshold: " + TTL_MINUTES + " minutes");
 
-                int expired = new ReservationDAO().cleanExpired(TTL_MINUTES);
+                int expired = reservationService.expirePendingReservations(TTL_MINUTES);
 
                 if (expired > 0) {
                     gui.log("TTL expired reservations: " + expired);

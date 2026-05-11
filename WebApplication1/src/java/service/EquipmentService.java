@@ -25,8 +25,8 @@ import java.util.Map;
  */
 public class EquipmentService {
 
-    /** Concurrency control for in-memory equipment semaphores. */
-    private final EquipmentControl control;
+    /** Shared concurrency control for in-memory equipment semaphores. */
+    private static final EquipmentControl control = new EquipmentControl();
 
     /** DAO used to persist availability changes to the database. */
     private final EquipmentDAO dao;
@@ -36,7 +36,6 @@ public class EquipmentService {
      * {@link EquipmentControl} and {@link EquipmentDAO} instances.
      */
     public EquipmentService() {
-        this.control = new EquipmentControl();
         this.dao = new EquipmentDAO(); 
     }
 

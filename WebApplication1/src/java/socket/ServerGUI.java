@@ -172,7 +172,7 @@ public class ServerGUI extends JFrame {
             return;
         }
 
-        ttlMonitor = new TTLMonitor(this);
+        ttlMonitor = new TTLMonitor(this, reservationService);
         ttlMonitor.setDaemon(true);
         ttlMonitor.start();
 

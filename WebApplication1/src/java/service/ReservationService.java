@@ -4,10 +4,12 @@ import concurrency.CalendarLock;
 import concurrency.CapacityControl;
 import concurrency.SystemLog;
 import dao.ReservationDAO;
+import java.util.HashMap;
 import java.util.ArrayList;
 import model.Reservation;
 import model.ReservationEquipment;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service layer responsible for applying business rules related to reservations.
@@ -47,6 +49,11 @@ public class ReservationService {
      * Singleton audit log used to register reservation-related events.
      */
     private final SystemLog log = SystemLog.getInstance();
+
+    /**
+     * Service that connects reservation flow with equipment semaphores.
+     */
+    private final EquipmentService equipmentService = new EquipmentService();
 
     /**
      * Creates a new reservation with one or more audiovisual equipment items.
@@ -103,6 +110,14 @@ public class ReservationService {
                 return "busy_time";
             }
 
+            Map<String, Integer> equipmentRequirements = buildEquipmentRequirements(equipments);
+
+            if (!equipmentService.reserveMultiple(equipmentRequirements, "pending")) {
+                log.log(user, "RESERVE_REJECT", "Equipo no disponible para "
+                        + date + " " + startTime + "-" + endTime);
+                return "busy_equipment";
+            }
+
             boolean ok = dao.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
 
             if (ok) {
@@ -110,6 +125,7 @@ public class ReservationService {
                         "Reserva creada: " + date + " " + startTime + "-" + endTime
                         + " Asistentes: " + quantity);
             } else {
+                equipmentService.releaseMultiple(equipmentRequirements, "rollback");
                 log.log(user, "RESERVE_ERROR",
                         "Error al crear reserva: " + date + " " + startTime + "-" + endTime);
             }
@@ -323,9 +339,12 @@ public class ReservationService {
      * @return {@code "deleted"} if successful; otherwise {@code "error"}
      */
     public String deleteReservation(int id) {
+        Reservation reservation = dao.getByIdWithEquipment(id);
+
         boolean ok = dao.delete(id);
 
         if (ok) {
+            releaseReservationEquipment(reservation, "delete-" + id);
             log.log("SYSTEM", "DELETE_OK", "Reserva eliminada id=" + id);
         } else {
             log.log("SYSTEM", "DELETE_ERROR", "Error al eliminar id=" + id);
@@ -359,15 +378,43 @@ public class ReservationService {
             return "not_allowed";
         }
 
+        Reservation reservation = dao.getByIdWithEquipment(id);
         boolean ok = dao.delete(id);
 
         if (ok) {
+            releaseReservationEquipment(reservation, "cancel-" + id);
             log.log(email, "CANCEL_OK", "Reserva cancelada id=" + id);
         } else {
             log.log(email, "CANCEL_ERROR", "Error al cancelar id=" + id);
         }
 
         return ok ? "cancelled" : "error";
+    }
+
+    /**
+     * Expires pending reservations that exceeded TTL and releases their equipment.
+     *
+     * @param ttlMinutes reservation TTL in minutes
+     * @return number of reservations marked as expired
+     */
+    public int expirePendingReservations(int ttlMinutes) {
+        CalendarLock.lock();
+
+        try {
+            List<Reservation> expiredReservations = dao.getPendingExpiredWithEquipment(ttlMinutes);
+            int expired = dao.cleanExpired(ttlMinutes);
+
+            if (expired > 0) {
+                for (Reservation reservation : expiredReservations) {
+                    releaseReservationEquipment(reservation, "ttl-" + reservation.getId());
+                }
+            }
+
+            return expired;
+
+        } finally {
+            CalendarLock.unlock();
+        }
     }
 
     /**
@@ -532,6 +579,63 @@ public class ReservationService {
                 return 3;
             default:
                 return 0;
+        }
+    }
+
+    /**
+     * Converts reservation equipment IDs into the names used by EquipmentControl.
+     */
+    private Map<String, Integer> buildEquipmentRequirements(List<ReservationEquipment> equipments) {
+        Map<String, Integer> requirements = new HashMap<>();
+
+        if (equipments == null || equipments.isEmpty()) {
+            return requirements;
+        }
+
+        for (ReservationEquipment equipment : equipments) {
+            String type = getEquipmentType(equipment.getEquipmentId());
+
+            if (type != null) {
+                int current = requirements.containsKey(type) ? requirements.get(type) : 0;
+                requirements.put(type, current + equipment.getQuantity());
+            }
+        }
+
+        return requirements;
+    }
+
+    /**
+     * Releases semaphore permits for equipment that belonged to a reservation.
+     */
+    private void releaseReservationEquipment(Reservation reservation, String reservationId) {
+        if (reservation == null) {
+            return;
+        }
+
+        if ("EXPIRED".equalsIgnoreCase(reservation.getStatus())) {
+            return;
+        }
+
+        Map<String, Integer> requirements = buildEquipmentRequirements(reservation.getEquipments());
+
+        if (!requirements.isEmpty()) {
+            equipmentService.releaseMultiple(requirements, reservationId);
+        }
+    }
+
+    /**
+     * Maps database equipment IDs to semaphore names.
+     */
+    private String getEquipmentType(int equipmentId) {
+        switch (equipmentId) {
+            case 1:
+                return "PROYECTOR";
+            case 2:
+                return "MICROFONO";
+            case 3:
+                return "SONIDO";
+            default:
+                return null;
         }
     }
 }
