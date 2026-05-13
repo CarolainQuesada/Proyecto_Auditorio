@@ -4,76 +4,82 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-/**
- * Utility class that provides JDBC {@link Connection} objects to the MySQL
- * database hosted on Aiven Cloud.
- *
- * <p>Every call to {@link #getConnection()} opens a <em>new</em> physical
- * connection. Callers are responsible for closing the connection (preferably
- * with a try-with-resources block) to avoid connection leaks.
- *
- * <p><b>Security note:</b> Credentials are currently hard-coded as class
- * constants. In a production environment they should be externalised to
- * environment variables or a secrets manager, and the constants replaced with
- * {@code System.getenv()} calls.
- *
- * <p>Usage example:
- * <pre>{@code
- * try (Connection con = DBConnection.getConnection();
- *      PreparedStatement ps = con.prepareStatement("SELECT ...")) {
- *     // use ps …
- * }
- * }</pre>
- *
- * @see java.sql.DriverManager
- */
 public class DBConnection {
 
-    /**
-     * JDBC connection URL pointing to the remote MySQL instance.
-     * SSL is required ({@code sslMode=REQUIRED}).
-     */
-    private static final String URL =
-            "jdbc:mysql://mysql-11b2f5ad-db-so.g.aivencloud.com:28915/auditorio?sslMode=REQUIRED";
+    private static final String URL_BASE = Config.getDbUrl();
+    private static final String USER = Config.getDbUser();
+    private static final String PASSWORD = Config.getDbPassword();
+    
+    private static final String URL = URL_BASE + 
+        "&connectTimeout=10000" +
+        "&socketTimeout=30000" +
+        "&autoReconnect=true" +
+        "&failOverReadOnly=false";
+    
+    // Retry configuration
+    private static final int MAX_RETRIES = 5;
+    private static final int RETRY_DELAY_MS = 2000;
 
-    /** Database username. */
-    private static final String USER = "avnadmin";
-
-    /** Database password (plain text — see security note in class Javadoc). */
-    private static final String PASSWORD = "AVNS_BbW0UnDbv72t2jXued-";
-
-    /**
-     * Private constructor — this class is a static utility and should not be
-     * instantiated.
-     */
     private DBConnection() {}
 
-    /**
-     * Opens and returns a new JDBC connection to the configured MySQL database.
-     *
-     * <p>The MySQL Connector/J driver ({@code com.mysql.cj.jdbc.Driver}) is
-     * loaded via reflection on each call. While this has negligible overhead
-     * for modern JVMs (class loading is cached), it ensures the driver is
-     * always registered before {@link DriverManager#getConnection} is invoked.
-     *
-     * @return a new, open {@link Connection}; never {@code null}
-     * @throws SQLException if the driver class cannot be found, or if the
-     *                      database refuses the connection (wrong credentials,
-     *                      network issue, etc.)
-     */
     public static Connection getConnection() throws SQLException {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            if (URL == null || USER == null || PASSWORD == null) {
-                throw new SQLException(
-                        "Missing DB_URL, DB_USER, or DB_PASSWORD configuration");
+        int attempts = 0;
+        SQLException lastError = null;
+        
+        while (attempts < MAX_RETRIES) {
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+                
+                Connection con = DriverManager.getConnection(URL, USER, PASSWORD);
+                
+                if (attempts > 0) {
+                    System.out.println("✅ DB connection restored after " + attempts + " attempts");
+                }
+                return con;
+                
+            } catch (ClassNotFoundException e) {
+                throw new SQLException("MySQL driver not found", e);
+                
+            } catch (SQLException e) {
+                lastError = e;
+                attempts++;
+                
+                String msg = e.getMessage().toLowerCase();
+                if (msg.contains("access denied") || 
+                    msg.contains("unknown database") ||
+                    msg.contains("configuration")) {
+                    throw e;
+                }
+                
+                System.err.println("⚠️  DB connection error (attempt " + attempts + "/" + MAX_RETRIES + "): " + e.getMessage());
+                
+                if (attempts >= MAX_RETRIES) {
+                    System.err.println("❌ Max DB connection retries reached");
+                    throw e;
+                }
+                
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new SQLException("Connection interrupted", e);
+                }
             }
-
-            return DriverManager.getConnection(URL, USER, PASSWORD);
-
-        } catch (ClassNotFoundException e) {
-            throw new SQLException("MySQL driver not found on the classpath", e);
         }
+        
+        throw lastError != null ? lastError : new SQLException("Unknown connection error");
+    }
+    
+    public static boolean testConnection() {
+        try (Connection con = getConnection()) {
+            return con != null && !con.isClosed();
+        } catch (SQLException e) {
+            System.err.println("❌ Connection test failed: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    public static String getConnectionInfo() {
+        return "URL: " + URL_BASE + "... | User: " + USER;
     }
 }

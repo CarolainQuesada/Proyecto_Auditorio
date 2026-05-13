@@ -2,80 +2,114 @@ package util;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 /**
- * Lightweight TCP client used by web-layer servlets to communicate with the
- * {@link socket.ServerGUI} reservation server running on localhost.
- *
- * <p>The server listens on port {@value #PORT}. Each call to
- * {@link #sendCommand(String)} opens a fresh socket connection, sends a
- * single text command, reads one line of response, and then closes the
- * socket. This connection-per-request model is simple and stateless, but
- * carries per-call overhead; it is suitable for the low-to-medium throughput
- * expected in an academic auditorium management system.
- *
- * <p>All methods are {@code static} because no per-instance state is
- * maintained.
- *
- * <p>Command protocol — commands are semicolon-delimited strings, for
- * example:
- * <pre>
- *   RESERVE;user@una.ac.cr;2026-05-01;08:00;10:00;80;1,2;1,3
- *   CONFIRM;42
- *   DELETE;42
- *   LIST
- * </pre>
- *
- * @see socket.ClientHandler
+ * TCP client for servlets to communicate with the reservation server.
+ * 
+ * <p>Supports configurable host and retry logic for distributed deployment.
  */
 public class SocketClient {
 
-    /** Hostname of the reservation server. */
-    private static final String HOST = "localhost";
+    private static final String HOST = Config.getSocketHost();
+    private static final int PORT = Config.getSocketPort();
+    
+    /** Connection timeout in milliseconds */
+    private static final int CONNECT_TIMEOUT = 10000;
+    
+    /** Socket read timeout in milliseconds */
+    private static final int READ_TIMEOUT = 30000;
+    
+    /** Max retries for transient failures */
+    private static final int MAX_RETRIES = 3;
+    
+    /** Delay between retries in milliseconds */
+    private static final int RETRY_DELAY = 2000;
 
-    /** TCP port on which the reservation server accepts connections. */
-    private static final int PORT = 5000;
-
-    /**
-     * Private constructor — this class is a static utility and should not be
-     * instantiated.
-     */
     private SocketClient() {}
 
-    /**
-     * Sends a text command to the reservation server and returns its
-     * single-line response.
-     *
-     * <p>The method opens a new {@link Socket}, writes {@code command}
-     * followed by a newline, reads the first line of the server's reply, and
-     * closes the socket — all within a single try-with-resources block.
-     *
-     * <p>If an {@link IOException} occurs (e.g., the server is down), the
-     * error is logged to {@code stderr} and the string {@code "error"} is
-     * returned so callers can handle it uniformly.
-     *
-     * @param command the protocol command to send (must not be {@code null}
-     *                or empty)
-     * @return the server's response line, or {@code "error"} if an I/O
-     *         error occurred or the server returned no data
-     */
     public static String sendCommand(String command) {
-        String response = "error";
-        try (Socket socket = new Socket(HOST, PORT);
+    Socket socket = new Socket();
+    try {
+        // 1. Primero conectar
+        socket.connect(new java.net.InetSocketAddress(HOST, PORT), CONNECT_TIMEOUT);
+        socket.setSoTimeout(READ_TIMEOUT);
+
+        // 2. Luego abrir los flujos
+        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+        // 3. Enviar y recibir
+        out.println(command);
+        String response = in.readLine();
+        return (response != null) ? response : "error";
+
+    } catch (IOException e) {
+        System.err.println(" Socket error: " + e.getMessage());
+        return retryOrError(command, MAX_RETRIES, "io");
+    } finally {
+        // 4. Cerrar siempre el socket
+        try { if (socket != null) socket.close(); } catch (IOException ignored) {}
+    }
+}
+    
+    private static String sendCommandWithRetries(String command, int retriesLeft) {
+        try (Socket socket = new Socket();
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(
                      new InputStreamReader(socket.getInputStream()))) {
+            
+            // Configurar timeouts
+            socket.connect(
+                new java.net.InetSocketAddress(HOST, PORT), 
+                CONNECT_TIMEOUT
+            );
+            socket.setSoTimeout(READ_TIMEOUT);
 
             out.println(command);
+            String response = in.readLine();
+            
+            return (response != null) ? response : "error";
 
-            String serverResponse = in.readLine();
-            if (serverResponse != null) {
-                response = serverResponse;
-            }
-
+        } catch (SocketTimeoutException e) {
+            System.err.println("⏱️  Timeout connecting to server: " + e.getMessage());
+            return retryOrError(command, retriesLeft, "timeout");
+            
         } catch (IOException e) {
-            System.err.println("Socket error: " + e.getMessage());
+            System.err.println("🔌 Socket error: " + e.getMessage());
+            return retryOrError(command, retriesLeft, "io");
+            
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error: " + e.getMessage());
+            return "error";
         }
-        return response;
+    }
+    
+    private static String retryOrError(String command, int retriesLeft, String errorType) {
+        if (retriesLeft > 1) {
+            System.out.println("🔄 Retrying... (" + (MAX_RETRIES - retriesLeft + 1) + "/" + MAX_RETRIES + ")");
+            try {
+                Thread.sleep(RETRY_DELAY);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            return sendCommandWithRetries(command, retriesLeft - 1);
+        }
+        return "error";
+    }
+    
+    /** Utility method to test connection */
+    public static boolean isServerAvailable() {
+        try (Socket socket = new Socket()) {
+            socket.connect(new java.net.InetSocketAddress(HOST, PORT), 5000);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+    
+    /** Getter for debugging */
+    public static String getServerHost() {
+        return HOST;
     }
 }

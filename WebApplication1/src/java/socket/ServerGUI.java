@@ -121,7 +121,17 @@ public class ServerGUI extends JFrame {
 
         Thread serverThread = new Thread(() -> {
             try {
-                server = new ServerSocket(5000);
+               
+                server = new ServerSocket(5000, 50, java.net.InetAddress.getByName("0.0.0.0"));
+
+                String serverIP = java.net.InetAddress.getLocalHost().getHostAddress();
+                log("===========================================");
+                log("🚀 SERVER STARTED");
+                log("📡 IP: " + serverIP);
+                log("🔌 Port: 5000");
+                log("🌐 Listening on all interfaces (0.0.0.0)");
+                log("===========================================");
+                System.out.println("Server listening on " + serverIP + ":5000");
                 running = true;
 
                 log("Server started on port 5000");
@@ -132,18 +142,26 @@ public class ServerGUI extends JFrame {
                 while (running) {
                     try {
                         Socket client = server.accept();
-                        String ip = client.getInetAddress().getHostAddress();
+                        String clientIP = client.getInetAddress().getHostAddress();
+                        int clientPort = client.getPort();
+                        log("📥 New connection from: " + clientIP + ":" + 
+                                clientPort);
+                        System.out.println("[SERVER] Client connected: " + 
+                                clientIP + ":" + clientPort);
 
-                        log("New incoming connection from: " + ip);
-
-                        ClientHandler handler = new ClientHandler(client, reservationService, this);
+                        ClientHandler handler = new ClientHandler(client, 
+                                reservationService, this);
                         handler.start();
 
                     } catch (Exception e) {
-                        if (running) {
-                            log("Connection error: " + e.getMessage());
+                    if (running) {
+                        if (!(e instanceof java.net.SocketException)) {
+                            log("⚠️  Connection error: " + e.getMessage());
+                            System.err.println("[SERVER] Connection error: " +
+                                    e.getMessage());
                         }
                     }
+                  }
                 }
 
             } catch (Exception e) {
