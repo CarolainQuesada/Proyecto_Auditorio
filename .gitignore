@@ -2,3 +2,11 @@
 build/
 dist/
 WebApplication1/build/
+
+nbproject/private/
+
+build/
+dist/
+
+*.log
+*.class
