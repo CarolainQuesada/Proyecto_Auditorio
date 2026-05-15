@@ -1,12 +1,4 @@
 *.class
 build/
 dist/
-WebApplication1/build/
-
-nbproject/private/
-
-build/
-dist/
-
-*.log
-*.class
+AuditorioUNA/WebApplication1/nbproject/private/
