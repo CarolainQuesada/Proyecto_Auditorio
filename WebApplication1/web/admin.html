@@ -3,1066 +3,1036 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Reservas</title>
+  <title>Administracion - Auditorio UNA</title>
+  <script>
+    if (window.location.protocol === "file:") {
+      window.location.href = "http://localhost:8080/AuditorioUNA/admin.html";
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="assets/chart.umd.min.js"></script>
+  <style>
+    body { background:#f6f7f9; color:#111827; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .shell { display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+    .sidebar { background:#fff; border-right:1px solid #e5e7eb; padding:24px; position:sticky; top:0; height:100vh; }
+    .main { padding:28px; }
+    .brand-mark { width:44px; height:44px; border-radius:10px; background:#fff; border:1px solid #e5e7eb; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .brand-mark img { width:34px; height:auto; display:block; }
+    .nav-btn { display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:9px; color:#4b5563; font-size:14px; font-weight:700; text-align:left; }
+    .nav-btn:hover, .nav-btn.active { background:#fff1f1; color:#b00000; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 12px 30px rgba(17,24,39,.04); }
+    .metric { padding:18px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; }
+    .metric-label { font-size:12px; color:#6b7280; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+    .metric-value { font-size:30px; line-height:1; font-weight:800; margin-top:10px; }
+    .input { width:100%; border:1px solid #d1d5db; border-radius:9px; padding:10px 12px; font-size:14px; background:#fff; outline:none; }
+    .input:focus { border-color:#b00000; box-shadow:0 0 0 3px rgba(176,0,0,.10); }
+    .btn { border:0; border-radius:9px; padding:10px 14px; font-size:14px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:8px; justify-content:center; }
+    .btn-primary { background:#b00000; color:#fff; }
+    .btn-primary:hover { background:#8f0000; }
+    .btn-dark { background:#111827; color:#fff; }
+    .btn-soft { background:#f3f4f6; color:#374151; }
+    .btn-soft:hover { background:#e5e7eb; }
+    .btn-blue { background:#034991; color:#fff; }
+    .btn-green { background:#15803d; color:#fff; }
+    .btn-yellow { background:#ca8a04; color:#fff; }
+    .btn-danger { background:#dc2626; color:#fff; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .status { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:800; }
+    .status-pending { background:#fef3c7; color:#92400e; }
+    .status-confirmed { background:#dcfce7; color:#166534; }
+    .status-expired { background:#f3f4f6; color:#6b7280; }
+    .table-wrap { overflow:auto; }
+    table { border-collapse:separate; border-spacing:0; width:100%; }
+    th { background:#f9fafb; color:#6b7280; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; text-align:left; padding:12px; border-bottom:1px solid #e5e7eb; }
+    td { padding:12px; border-bottom:1px solid #f1f5f9; font-size:14px; vertical-align:top; }
+    tr:hover td { background:#fafafa; }
+    .section { display:none; }
+    .section.active { display:block; }
+    .toast { display:none; border-radius:10px; padding:12px 14px; font-size:14px; font-weight:700; margin-bottom:16px; }
+    .toast.on { display:block; }
+    .toast-ok { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+    .toast-warn { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+    .toast-error { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+    .modal-backdrop { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(17,24,39,.45); z-index:50; }
+    .modal-backdrop.on { display:flex; }
+    .modal { width:min(100%,720px); max-height:90vh; overflow:auto; background:#fff; border-radius:14px; border:1px solid #e5e7eb; box-shadow:0 28px 80px rgba(17,24,39,.24); padding:24px; }
+    body.checking-session .shell { visibility:hidden; }
+    .session-loader { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:#f6f7f9; color:#b00000; font-weight:800; z-index:100; }
+    body.checking-session .session-loader { display:flex; }
+    @media (max-width: 900px) {
+      .shell { grid-template-columns:1fr; }
+      .sidebar { position:relative; height:auto; }
+      .main { padding:18px; }
+    }
+  </style>
 </head>
 
-<body class="bg-gray-100">
+<body class="checking-session">
+<div class="session-loader">Verificando administrador...</div>
 
-  <header class="bg-red-800 text-white p-4 flex justify-between">
-    <h1 class="font-bold text-xl">Panel Administrador</h1>
-    <div>
-      Admin: <span id="user"></span>
-      <a href="logout" class="ml-4 bg-white text-red-800 px-3 py-1 rounded">Salir</a>
-    </div>
-  </header>> 
-<div class="p-6">
-  
-  <div id="mensaje" class="mb-4"></div>
-
-  <h2 class="text-xl font-bold mb-4">Reservas Registradas</h2>
-
-  <div class="p-6">
-
-    <h2 class="text-xl font-bold mb-4">Reservas Registradas</h2>
-
-    <button onclick="window.location.href='limpiarTTL'"
-      class="bg-black text-white px-4 py-2 mb-4 rounded">
-      Limpiar expiradas
-    </button>
-    
-    <form action="blockDay" method="POST" class="flex gap-2 mb-4 items-center">
-  <input type="date" name="date" required class="border p-2 rounded">
-  <input type="text" name="reason" placeholder="Motivo (ej: Mantenimiento)" required class="border p-2 rounded">
-  <button type="submit" class="bg-[#034991] text-white px-4 py-2 rounded hover:bg-[#034991]/90">🚫 Bloquear Día</button>
-</form>
-
-    <div id="mensaje" class="mb-4 font-bold"></div>
-
-    <div id="loadingReservas" class="text-center py-4 text-gray-500 hidden">
-      <span class="inline-block animate-spin mr-2">⏳</span> Cargando reservas...
-    </div>
-    <table class="w-full bg-white shadow text-center rounded overflow-hidden">
-      <thead class="bg-gray-200">
-        <tr>
-          <th class="p-2">ID</th>
-          <th class="p-2">Fecha</th>
-          <th class="p-2">Hora</th>
-          <th class="p-2">Asistentes</th>
-          <th class="p-2">Estado</th>
-          <th class="p-2">Usuario</th>
-          <th class="p-2">Equipamiento</th>
-          <th class="p-2">Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tabla"></tbody>
-    </table>
-    
-    <div class="p-4 mt-6 bg-gray-50 rounded-lg">
-      <h3 class="text-lg font-bold mb-4">📊 Estadísticas del Auditorio</h3>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-white p-4 rounded shadow" style="max-height: 500px;">
-          <h4 class="font-bold mb-2 text-sm">Reservas por Día</h4>
-          <div style="position: relative; height: 200px;">
-            <canvas id="chartReservasDia"></canvas>
-          </div>
-        </div>
-
-        <div class="bg-white p-4 rounded shadow" style="max-height: 500px;">
-          <h4 class="font-bold mb-2 text-sm">Estado de Reservas</h4>
-          <div style="position: relative; height: 200px;">
-            <canvas id="chartEstados"></canvas>
-          </div>
-        </div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="brand-mark"><img src="assets/una-logo.png" alt="UNA"></div>
+      <div>
+        <p class="font-extrabold text-gray-900 leading-tight">Auditorio UNA</p>
+        <p class="text-xs text-gray-500">Panel administrativo</p>
       </div>
     </div>
-    
-    <h3 class="text-lg font-bold mt-6">Crear / Editar Reserva</h3>
 
-    <form id="formReserva" action="ReservationServlet" method="POST"
-      class="bg-white p-4 rounded shadow mt-2" onsubmit="return validarAdminForm()">
+    <nav class="space-y-1">
+      <button class="nav-btn active" data-section="reservas" onclick="showSection('reservas')">Reservas</button>
+      <button class="nav-btn" data-section="crear" onclick="showSection('crear')">Crear / Editar</button>
+      <button class="nav-btn" data-section="estadisticas" onclick="showSection('estadisticas')">Estadisticas</button>
+      <button class="nav-btn" data-section="bitacora" onclick="showSection('bitacora')">Bitacora</button>
+    </nav>
 
-      <input type="hidden" name="action" value="reservar">
-      <input type="hidden" name="source" value="admin">
-      <input type="hidden" id="idReserva" name="id">
+    <div class="mt-8 pt-5 border-t border-gray-200">
+      <p class="text-xs text-gray-500 uppercase font-extrabold tracking-wide mb-1">Sesion</p>
+      <p id="user" class="text-sm font-bold text-gray-800 truncate">Admin</p>
+      <a href="logout" class="btn btn-soft w-full mt-4">Salir</a>
+    </div>
+  </aside>
 
-      <label class="font-bold">Fecha</label>
-      <input type="date" name="date" id="fechaInput"
-        class="w-full border p-2 mb-2 rounded" required>
+  <main class="main">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+      <div>
+        <p class="text-xs uppercase tracking-wider text-red-700 font-extrabold">Gestion de espacios</p>
+        <h1 class="text-3xl font-extrabold text-gray-950">Panel Administrador</h1>
+        <p class="text-sm text-gray-500 mt-1">Control de reservas, equipos, bloqueos y auditoria del sistema.</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-soft" onclick="cargarReservas()">Actualizar reservas</button>
+        <button class="btn btn-dark" onclick="window.location.href='limpiarTTL'">Limpiar expiradas</button>
+      </div>
+    </div>
 
-      <label class="font-bold">Hora inicio</label>
-      <input type="time" name="start_time" id="horaInicioInput"
-        class="w-full border p-2 mb-2 rounded" required>
+    <div id="mensaje" class="toast"></div>
 
-      <label class="font-bold">Hora fin</label>
-      <input type="time" name="end_time" id="horaFinInput"
-        class="w-full border p-2 mb-2 rounded" required>
-
-      <label class="font-bold">Cantidad</label>
-      <input type="number" name="quantity" id="cantidadInput"
-        class="w-full border p-2 mb-2 rounded" required min="1" max="200">
-
-      <label class="font-bold">Estado</label>
-      <select name="status" id="estadoInput" class="w-full border p-2 mb-2 rounded">
-        <option value="PENDING">PENDIENTE</option>
-        <option value="CONFIRMED">CONFIRMADA</option>
-        <option value="EXPIRED">EXPIRADA</option>
-      </select>
-
-      <div id="equipamientoCrearBox">
-        <label class="font-bold block mt-4 mb-2">Equipamiento audiovisual</label>
-
-        <div class="space-y-3 mb-4">
-
-          <div class="border rounded p-3 bg-gray-50">
-            <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
-              <input type="checkbox" name="equipment" value="1" class="equipment-check">
-              Proyector
-              <span class="text-gray-500 font-normal">(2 disponibles)</span>
-            </label>
-            <input type="number" name="eqQty_1" id="eqQty_1"
-              class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
-              value="0" min="0" max="2" disabled>
-          </div>
-
-          <div class="border rounded p-3 bg-gray-50">
-            <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
-              <input type="checkbox" name="equipment" value="2" class="equipment-check">
-              Micrófono
-              <span class="text-gray-500 font-normal">(5 disponibles)</span>
-            </label>
-            <input type="number" name="eqQty_2" id="eqQty_2"
-              class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
-              value="0" min="0" max="5" disabled>
-          </div>
-
-          <div class="border rounded p-3 bg-gray-50">
-            <label class="flex items-center gap-2 font-bold text-sm text-gray-700">
-              <input type="checkbox" name="equipment" value="3" class="equipment-check">
-              Sistema de sonido
-              <span class="text-gray-500 font-normal">(3 disponibles)</span>
-            </label>
-            <input type="number" name="eqQty_3" id="eqQty_3"
-              class="equipment-qty w-full border p-2 mt-2 rounded bg-gray-100"
-              value="0" min="0" max="3" disabled>
-          </div>
-
-        </div>
-
-        <p class="text-xs text-gray-500 mb-3">
-          * El equipamiento se asigna al crear la reserva. Para reservas existentes, use el botón 🔧.
-        </p>
+    <section id="section-reservas" class="section active">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="metric"><p class="metric-label">Total</p><p id="metricTotal" class="metric-value text-gray-900">0</p></div>
+        <div class="metric"><p class="metric-label">Pendientes</p><p id="metricPending" class="metric-value text-yellow-700">0</p></div>
+        <div class="metric"><p class="metric-label">Confirmadas</p><p id="metricConfirmed" class="metric-value text-green-700">0</p></div>
+        <div class="metric"><p class="metric-label">Expiradas</p><p id="metricExpired" class="metric-value text-gray-500">0</p></div>
       </div>
 
-      <button id="btnGuardar"
-        class="bg-red-700 text-white px-4 py-2 rounded">
-        Crear
-      </button>
-
-      <button type="button" onclick="cancelarEdicion()"
-        id="btnCancelar"
-        class="bg-gray-500 text-white px-4 py-2 rounded ml-2 hidden">
-        Cancelar
-      </button>
-
-    </form>
-
-    <div class="mt-10">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold">Bitácora del Sistema</h2>
-        <div class="flex gap-2 items-center">
-          <input type="text" id="filtroLog"
-            placeholder="Filtrar usuario o acción..."
-            oninput="filtrarLogs()"
-            class="border px-3 py-2 rounded text-sm w-56">
-          <button onclick="cargarLogs()"
-            class="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-900 text-sm">
-             Actualizar
-          </button>
+      <div class="card p-5 mb-6">
+        <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+          <div class="flex-1">
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Buscar</label>
+            <input id="filtroTexto" class="input mt-1" placeholder="ID, correo, fecha o equipo..." oninput="programarCargaReservas()">
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Estado</label>
+            <select id="filtroEstado" class="input mt-1 min-w-44" onchange="recargarReservasFiltradas()">
+              <option value="ALL">Todos</option>
+              <option value="PENDING">Pendientes</option>
+              <option value="CONFIRMED">Confirmadas</option>
+              <option value="EXPIRED">Expiradas</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Fecha</label>
+            <input id="filtroFecha" type="date" class="input mt-1" onchange="recargarReservasFiltradas()">
+          </div>
+          <button class="btn btn-soft" onclick="limpiarFiltros()">Limpiar</button>
         </div>
       </div>
 
-      <div id="mensajeLogs" class="mb-3 text-sm font-bold"></div>
-
-      <div class="bg-white shadow rounded overflow-hidden">
-        <div class="overflow-y-auto" style="max-height: 420px;">
-            
-          <table class="w-full text-sm text-center">
-            <thead class="bg-red-800 text-white sticky top-0">
+      <div class="card">
+        <div class="flex items-center justify-between p-5 border-b border-gray-200">
+          <div>
+            <h2 class="text-xl font-extrabold">Reservas Registradas</h2>
+            <p id="reservasMeta" class="text-sm text-gray-500 mt-1">Cargando datos...</p>
+          </div>
+          <div id="loadingReservas" class="hidden text-sm font-bold text-gray-500">Cargando...</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <th class="p-2 w-12">ID</th>
-                <th class="p-2 w-40">Fecha y hora</th>
-                <th class="p-2 w-44">Usuario</th>
-                <th class="p-2 w-40">Acción</th>
-                <th class="p-2 text-left">Descripción</th>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Asistentes</th>
+                <th>Estado</th>
+                <th>Usuario</th>
+                <th>Equipamiento</th>
+                <th>Acciones</th>
               </tr>
             </thead>
-            <tbody id="tablaLogs">
-              <tr>
-                <td colspan="5" class="p-6 text-gray-400">
-                  Presione "Actualizar" para cargar la bitácora
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="tabla"></tbody>
           </table>
+        </div>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 border-t border-gray-200">
+          <p id="paginacionInfo" class="text-sm text-gray-500 font-bold">Pagina 1</p>
+          <div class="flex items-center gap-2">
+            <select id="pageSizeSelect" class="input w-24" onchange="cambiarTamanoPagina()">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+            </select>
+            <button id="btnPrevPage" type="button" class="btn btn-soft" onclick="cambiarPagina(-1)">Anterior</button>
+            <button id="btnNextPage" type="button" class="btn btn-soft" onclick="cambiarPagina(1)">Siguiente</button>
+          </div>
         </div>
       </div>
 
-      <p class="text-xs text-gray-400 mt-2">
-        * La bitácora registra todas las operaciones del sistema en tiempo real.
-      </p>
-    </div>
-
-  </div>
-
-  <div id="modalEquipos" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-lg w-full max-w-2xl">
-      <h3 class="font-bold text-lg mb-4">Editar Equipamiento</h3>
-      <div id="listaEquiposModal" class="space-y-3 mb-4 max-h-96 overflow-y-auto"></div>
-      <div class="flex justify-end gap-2">
-        <button type="button" onclick="cerrarModalEquipos()"
-          class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">
-          Cerrar
-        </button>
+      <div class="card p-5 mt-6">
+        <h3 class="text-lg font-extrabold mb-4">Bloquear dia</h3>
+        <form action="blockDay" method="POST" class="grid grid-cols-1 md:grid-cols-[220px_1fr_auto] gap-3">
+          <input type="date" name="date" required class="input">
+          <input type="text" name="reason" placeholder="Motivo, por ejemplo: mantenimiento" required class="input">
+          <button type="submit" class="btn btn-blue">Bloquear dia</button>
+        </form>
       </div>
+    </section>
+
+    <section id="section-crear" class="section">
+      <div class="card p-6">
+        <div class="flex items-center justify-between gap-3 mb-5">
+          <div>
+            <h2 id="formTitle" class="text-xl font-extrabold">Crear Reserva</h2>
+            <p class="text-sm text-gray-500 mt-1">Registra reservas administrativas o edita reservas existentes.</p>
+          </div>
+          <button type="button" onclick="cancelarEdicion()" id="btnCancelarTop" class="btn btn-soft hidden">Cancelar edicion</button>
+        </div>
+
+        <form id="formReserva" action="ReservationServlet" method="POST" onsubmit="return validarAdminForm()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="hidden" name="action" value="reservar">
+          <input type="hidden" name="source" value="admin">
+          <input type="hidden" id="idReserva" name="id">
+
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Fecha</label>
+            <input type="date" name="date" id="fechaInput" class="input mt-1" required>
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Asistentes</label>
+            <input type="number" name="quantity" id="cantidadInput" class="input mt-1" required min="1" max="200">
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Hora inicio</label>
+            <input type="time" name="start_time" id="horaInicioInput" class="input mt-1" required>
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Hora fin</label>
+            <input type="time" name="end_time" id="horaFinInput" class="input mt-1" required>
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Estado</label>
+            <select name="status" id="estadoInput" class="input mt-1">
+              <option value="PENDING">Pendiente</option>
+              <option value="CONFIRMED">Confirmada</option>
+              <option value="EXPIRED">Expirada</option>
+            </select>
+          </div>
+
+          <div id="equipamientoCrearBox" class="md:col-span-2">
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Equipamiento audiovisual</label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+              <label class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <span class="flex items-center gap-2 font-extrabold"><input type="checkbox" name="equipment" value="1" class="equipment-check"> Proyector</span>
+                <span class="text-xs text-gray-500">Maximo 2 unidades</span>
+                <input type="number" name="eqQty_1" id="eqQty_1" class="equipment-qty input mt-3 bg-gray-100" value="0" min="0" max="2" disabled>
+              </label>
+              <label class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <span class="flex items-center gap-2 font-extrabold"><input type="checkbox" name="equipment" value="2" class="equipment-check"> Microfono</span>
+                <span class="text-xs text-gray-500">Maximo 5 unidades</span>
+                <input type="number" name="eqQty_2" id="eqQty_2" class="equipment-qty input mt-3 bg-gray-100" value="0" min="0" max="5" disabled>
+              </label>
+              <label class="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <span class="flex items-center gap-2 font-extrabold"><input type="checkbox" name="equipment" value="3" class="equipment-check"> Sistema de sonido</span>
+                <span class="text-xs text-gray-500">Maximo 3 unidades</span>
+                <input type="number" name="eqQty_3" id="eqQty_3" class="equipment-qty input mt-3 bg-gray-100" value="0" min="0" max="3" disabled>
+              </label>
+            </div>
+          </div>
+
+          <div class="md:col-span-2 flex gap-2">
+            <button id="btnGuardar" class="btn btn-primary">Crear reserva</button>
+            <button type="button" onclick="cancelarEdicion()" id="btnCancelar" class="btn btn-soft hidden">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="section-estadisticas" class="section">
+      <div class="card p-5 mb-5">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-extrabold">Estadisticas</h2>
+            <p class="text-sm text-gray-500 mt-1">Resumen de reservas por periodo.</p>
+          </div>
+          <div>
+            <label class="text-xs font-extrabold text-gray-500 uppercase">Periodo</label>
+            <select id="statsRange" class="input mt-1 min-w-44" onchange="cargarGraficos(true)">
+              <option value="all">Todo</option>
+              <option value="week">Esta semana</option>
+              <option value="month">Este mes</option>
+              <option value="year">Este año</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="card p-5">
+          <h3 class="text-lg font-extrabold mb-4">Reservas por dia</h3>
+          <div style="height:280px"><canvas id="chartReservasDia"></canvas></div>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-lg font-extrabold mb-4">Estado de reservas</h3>
+          <div style="height:280px"><canvas id="chartEstados"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="section-bitacora" class="section">
+      <div class="card">
+        <div class="p-5 border-b border-gray-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-extrabold">Bitacora del Sistema</h2>
+            <p id="mensajeLogs" class="text-sm text-gray-500 mt-1">Cargando registros...</p>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="filtroLog" placeholder="Filtrar usuario o accion..." oninput="programarCargaLogs()" class="input w-64">
+            <button onclick="cargarLogs()" class="btn btn-primary">Actualizar</button>
+          </div>
+        </div>
+        <div class="table-wrap max-h-[560px]">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha y hora</th>
+                <th>Usuario</th>
+                <th>Accion</th>
+                <th>Descripcion</th>
+              </tr>
+            </thead>
+            <tbody id="tablaLogs"></tbody>
+          </table>
+        </div>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 border-t border-gray-200">
+          <p id="logsPaginacionInfo" class="text-sm text-gray-500 font-bold">Pagina 1</p>
+          <div class="flex items-center gap-2">
+            <select id="logsPageSizeSelect" class="input w-24" onchange="cambiarTamanoLogs()">
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <button id="btnPrevLogsPage" type="button" class="btn btn-soft" onclick="cambiarPaginaLogs(-1)">Anterior</button>
+            <button id="btnNextLogsPage" type="button" class="btn btn-soft" onclick="cambiarPaginaLogs(1)">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modalEquipos" class="modal-backdrop">
+  <div class="modal">
+    <div class="flex items-start justify-between gap-4 mb-4">
+      <div>
+        <h3 class="text-xl font-extrabold">Editar Equipamiento</h3>
+        <p class="text-sm text-gray-500 mt-1">Ajusta los equipos asignados a la reserva.</p>
+      </div>
+      <button type="button" onclick="cerrarModalEquipos()" class="btn btn-soft">Cerrar</button>
+    </div>
+    <div id="listaEquiposModal" class="space-y-3"></div>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal-backdrop">
+  <div class="modal max-w-md">
+    <h3 id="confirmTitle" class="text-xl font-extrabold">Confirmar accion</h3>
+    <p id="confirmText" class="text-sm text-gray-600 mt-2"></p>
+    <div class="flex justify-end gap-2 mt-6">
+      <button class="btn btn-soft" onclick="closeConfirm()">Cancelar</button>
+      <button id="confirmActionBtn" class="btn btn-danger">Confirmar</button>
     </div>
   </div>
+</div>
 
-  <script>
+<script>
+  let reservas = [];
+  let reservasPage = 1;
+  let reservasPageSize = 10;
+  let reservasTotal = 0;
+  let todosLosLogs = [];
+  let logsPage = 1;
+  let logsPageSize = 20;
+  let logsTotal = 0;
+  let reservasFilterTimer = null;
+  let logsFilterTimer = null;
+  let chartsLoaded = false;
+  let chartDia = null;
+  let chartEstados = null;
+  let pendingConfirm = null;
 
+  const mensaje = document.getElementById("mensaje");
+
+  const EQUIPMENT_NAMES = { "1": "Proyector", "2": "Microfono", "3": "Sonido" };
+  const equipmentMax = { "1": 2, "2": 5, "3": 3 };
+
+  const URL_MSGS = {
+    ok: ["Reserva creada correctamente.", "ok"],
+    busy: ["Ese horario ya esta ocupado.", "error"],
+    busy_time: ["Ese horario ya esta reservado.", "error"],
+    busy_equipment: ["Uno o mas equipos no estan disponibles.", "warn"],
+    busy_capacity: ["Capacidad maxima excedida.", "warn"],
+    hour: ["La hora de inicio debe ser anterior a la hora final.", "warn"],
+    quantity: ["La cantidad debe estar entre 1 y 200 asistentes.", "warn"],
+    past: ["No se permiten reservas para fechas pasadas.", "warn"],
+    blocked_date: ["La fecha seleccionada esta bloqueada.", "warn"],
+    ttl: ["Limpieza de expiradas ejecutada.", "ok"],
+    confirmed: ["Reserva confirmada correctamente.", "ok"],
+    equipment_added: ["Equipamiento agregado.", "ok"],
+    equipment_updated: ["Equipamiento actualizado.", "ok"],
+    equipment_deleted: ["Equipamiento eliminado.", "ok"],
+    unauthorized: ["No tienes permisos para realizar esta accion.", "error"],
+    deadline_passed: ["Quedan menos de 24 horas para la reserva.", "warn"],
+    error_params: ["Faltan datos requeridos para crear la reserva.", "error"],
+    error_date: ["La fecha indicada no es valida.", "error"],
+    error: ["Ocurrio un problema al procesar la solicitud.", "error"],
+    server: ["Servidor no disponible.", "error"],
+    server_error: ["No se pudo conectar con el servidor.", "error"]
+  };
+
+  function toast(text, type) {
+    mensaje.className = "toast on " + (type === "ok" ? "toast-ok" : type === "warn" ? "toast-warn" : "toast-error");
+    mensaje.textContent = text;
+    setTimeout(() => { mensaje.className = "toast"; mensaje.textContent = ""; }, 5000);
+  }
+
+  function showSection(name) {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById("section-" + name).classList.add("active");
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.section === name));
+    if (name === "estadisticas") cargarGraficos();
+    if (name === "bitacora" && todosLosLogs.length === 0) cargarLogs();
+  }
+
+  function verificarSesion() {
     fetch("role")
       .then(res => res.text())
       .then(role => {
         if (role.trim() !== "ADMIN") {
           window.location.href = "index.html";
+          return;
         }
-      });
-
-    fetch("currentUser")
-      .then(res => res.text())
+        return fetch("currentUser");
+      })
+      .then(res => res ? res.text() : "")
       .then(user => {
-        document.getElementById("user").innerText = user;
+        if (user) document.getElementById("user").innerText = user;
+        document.body.classList.remove("checking-session");
+      })
+      .catch(() => window.location.href = "index.html");
+  }
+
+  function parseReserva(row) {
+    const p = row.split(",");
+    return {
+      id: p[0] || "",
+      date: p[1] || "",
+      start: p[2] || "",
+      end: p[3] || "",
+      quantity: p[4] || "",
+      status: p[5] || "",
+      user: p[6] || "",
+      equipmentRaw: p.slice(7).join(",")
+    };
+  }
+
+  function parseEquipments(equipStr) {
+    if (!equipStr || !equipStr.trim()) return [];
+    return equipStr.split(",").map(part => {
+      const [id, qty] = part.split(":");
+      return { id: (id || "").trim(), qty: parseInt((qty || "0").trim(), 10) };
+    }).filter(eq => eq.id);
+  }
+
+  function getEquipmentName(id) {
+    return EQUIPMENT_NAMES[id] || "Equipo " + id;
+  }
+
+  function equipmentText(equipStr) {
+    const items = parseEquipments(equipStr);
+    return items.length ? items.map(eq => getEquipmentName(eq.id) + " x" + eq.qty).join(", ") : "-";
+  }
+
+  function renderEquipmentBadges(equipStr, reservationId) {
+    const items = parseEquipments(equipStr);
+    if (!items.length) return '<span class="text-gray-400 text-xs">Sin equipo</span>';
+    return items.map(eq =>
+      '<span class="inline-flex items-center bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs mr-1 mb-1">' +
+      getEquipmentName(eq.id) + ' x' + eq.qty +
+      '<button type="button" onclick="eliminarEquipamento(' + reservationId + ', ' + eq.id + ')" class="ml-1 text-red-600 font-extrabold">&times;</button>' +
+      '</span>'
+    ).join("");
+  }
+
+  function statusClass(status) {
+    if (status === "CONFIRMED") return "status status-confirmed";
+    if (status === "PENDING") return "status status-pending";
+    if (status === "EXPIRED") return "status status-expired";
+    return "status status-expired";
+  }
+
+  function puedeActuar(fecha) {
+    const reservaDate = new Date(fecha + "T00:00:00");
+    const limite = new Date(reservaDate.getTime() - 24 * 60 * 60 * 1000);
+    return new Date() < limite;
+  }
+
+  function renderAcciones(r) {
+    const activo = puedeActuar(r.date);
+    let html = '<div class="flex flex-wrap gap-1">';
+    if (r.status === "PENDING") {
+      html += '<button type="button" ' + (activo ? 'onclick="confirmarReserva(' + r.id + ')"' : 'disabled') + ' class="btn btn-green text-xs px-2 py-1">Confirmar</button>';
+    }
+    if (r.status === "PENDING" || r.status === "CONFIRMED") {
+      html += '<button type="button" ' + (activo ? 'onclick="editarReserva(' + r.id + ')"' : 'disabled') + ' class="btn btn-yellow text-xs px-2 py-1">Editar</button>';
+    }
+    html += '<button type="button" onclick="verEquipos(' + r.id + ', \'' + escapeAttr(r.equipmentRaw) + '\')" class="btn btn-blue text-xs px-2 py-1">Equipos</button>';
+    html += '<button type="button" onclick="eliminar(' + r.id + ')" class="btn btn-danger text-xs px-2 py-1">Eliminar</button>';
+    if (!activo && (r.status === "PENDING" || r.status === "CONFIRMED")) {
+      html += '<span class="text-xs text-orange-700 bg-orange-100 rounded-full px-2 py-1">Menos de 24h</span>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function escapeAttr(value) {
+    return String(value || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
+  function limpiarFiltros() {
+    document.getElementById("filtroTexto").value = "";
+    document.getElementById("filtroEstado").value = "ALL";
+    document.getElementById("filtroFecha").value = "";
+    reservasPage = 1;
+    cargarReservas();
+  }
+
+  function totalPaginasReservas() {
+    return Math.max(1, Math.ceil(reservasTotal / reservasPageSize));
+  }
+
+  function actualizarPaginacion() {
+    const totalPages = totalPaginasReservas();
+    document.getElementById("paginacionInfo").textContent =
+      "Pagina " + reservasPage + " de " + totalPages + " - " + reservasTotal + " reservas";
+    document.getElementById("btnPrevPage").disabled = reservasPage <= 1;
+    document.getElementById("btnNextPage").disabled = reservasPage >= totalPages;
+  }
+
+  function cambiarPagina(delta) {
+    const nextPage = reservasPage + delta;
+    if (nextPage < 1 || nextPage > totalPaginasReservas()) return;
+    reservasPage = nextPage;
+    cargarReservas();
+  }
+
+  function cambiarTamanoPagina() {
+    reservasPageSize = parseInt(document.getElementById("pageSizeSelect").value || "10", 10);
+    reservasPage = 1;
+    cargarReservas();
+  }
+
+  function recargarReservasFiltradas() {
+    reservasPage = 1;
+    cargarReservas();
+  }
+
+  function programarCargaReservas() {
+    clearTimeout(reservasFilterTimer);
+    reservasFilterTimer = setTimeout(recargarReservasFiltradas, 300);
+  }
+
+  function reservasQueryString() {
+    const params = new URLSearchParams();
+    params.set("page", reservasPage);
+    params.set("size", reservasPageSize);
+    const text = document.getElementById("filtroTexto").value.trim();
+    const estado = document.getElementById("filtroEstado").value;
+    const fecha = document.getElementById("filtroFecha").value;
+    if (text) params.set("search", text);
+    if (estado && estado !== "ALL") params.set("status", estado);
+    if (fecha) params.set("date", fecha);
+    return params.toString();
+  }
+
+  function actualizarMetricas() {
+    fetch("stats")
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(data => {
+        const metrics = data.metrics || {};
+        document.getElementById("metricTotal").textContent = metrics.total || 0;
+        document.getElementById("metricPending").textContent = metrics.pending || 0;
+        document.getElementById("metricConfirmed").textContent = metrics.confirmed || 0;
+        document.getElementById("metricExpired").textContent = metrics.expired || 0;
       })
       .catch(() => {
-        document.getElementById("user").innerText = "Admin";
+        document.getElementById("metricTotal").textContent = reservasTotal || 0;
       });
+  }
 
-    const params = new URLSearchParams(window.location.search);
-    const msg = params.get("msg");
-    const mensaje = document.getElementById("mensaje");
+  function renderReservas() {
+    const tabla = document.getElementById("tabla");
+    const lista = reservas;
+    document.getElementById("reservasMeta").textContent = lista.length + " visibles en esta pagina, " + reservasTotal + " en total";
+    actualizarPaginacion();
 
-    const mensajes = {
-  
-  "ok":
-    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 +\n\
-    rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>✅</span>" +
-    "<div>" +
-      "<p class='font-bold'>Reserva creada</p>" +
-      "<p class='text-sm'>La reserva se ha registrado exitosamente en el sistema.</p>" +
-    "</div>" +
-    "</div>",
-
-  "busy":
-    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>⚠️</span>" +
-    "<div>" +
-      "<p class='font-bold'>Horario ocupado</p>" +
-      "<p class='text-sm'>Ya existe una reserva en ese horario.</p>" +
-    "</div>" +
-    "</div>",
-
-  "busy_time":
-    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>️</span>" +
-    "<div>" +
-      "<p class='font-bold'>Conflicto de horario</p>" +
-      "<p class='text-sm'>Ese horario ya está reservado.</p>" +
-    "</div>" +
-    "</div>",
-
-  "busy_equipment":
-    "<div class='bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🎛️</span>" +
-    "<div>" +
-      "<p class='font-bold'>Equipamiento no disponible</p>" +
-      "<p class='text-sm'>Uno o más equipos ya están reservados.</p>" +
-    "</div>" +
-    "</div>",
-
-  "busy_capacity":
-    "<div class='bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🚫</span>" +
-    "<div>" +
-      "<p class='font-bold'>Capacidad excedida</p>" +
-      "<p class='text-sm'>El auditorio no tiene cupo para esa cantidad.</p>" +
-    "</div>" +
-    "</div>",
-
-  "hour":
-    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'></span>" +
-    "<div>" +
-      "<p class='font-bold'>Hora inválida</p>" +
-      "<p class='text-sm'>La hora de inicio debe ser anterior a la de fin.</p>" +
-    "</div>" +
-    "</div>",
-
-  "quantity":
-    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>👥</span>" +
-    "<div>" +
-      "<p class='font-bold'>Cantidad inválida</p>" +
-      "<p class='text-sm'>Debe estar entre 1 y 200 asistentes.</p>" +
-    "</div>" +
-    "</div>",
-
-  "past":
-    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>📅</span>" +
-    "<div>" +
-      "<p class='font-bold'>Fecha inválida</p>" +
-      "<p class='text-sm'>No se permiten reservas para fechas pasadas.</p>" +
-    "</div>" +
-    "</div>",
-
-  "expired":
-    "<div class='bg-gray-50 border border-gray-200 text-gray-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'></span>" +
-    "<div>" +
-      "<p class='font-bold'>Reserva expirada</p>" +
-      "<p class='text-sm'>La reserva ya expiró y no se puede confirmar.</p>" +
-    "</div>" +
-    "</div>",
-
-  "ttl":
-    "<div class='bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🔄</span>" +
-    "<div>" +
-      "<p class='font-bold'>Limpieza ejecutada</p>" +
-      "<p class='text-sm'>Se han eliminado las reservas expiradas.</p>" +
-    "</div>" +
-    "</div>",
-
-  "confirmed":
-    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>✅</span>" +
-    "<div>" +
-      "<p class='font-bold'>Confirmada</p>" +
-      "<p class='text-sm'>La reserva ha sido confirmada exitosamente.</p>" +
-    "</div>" +
-    "</div>",
-
-  "equipment_added":
-    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🎛️</span>" +
-    "<div>" +
-      "<p class='font-bold'>Equipamiento agregado</p>" +
-      "<p class='text-sm'>Se han añadido los equipos a la reserva.</p>" +
-    "</div>" +
-    "</div>",
-
-  "equipment_updated":
-    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🔄</span>" +
-    "<div>" +
-      "<p class='font-bold'>Equipamiento actualizado</p>" +
-      "<p class='text-sm'>Se han modificado los equipos de la reserva.</p>" +
-    "</div>" +
-    "</div>",
-
-  "equipment_deleted":
-    "<div class='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>️</span>" +
-    "<div>" +
-      "<p class='font-bold'>Equipamiento eliminado</p>" +
-      "<p class='text-sm'>Se han removido los equipos de la reserva.</p>" +
-    "</div>" +
-    "</div>",
-
-  "error":
-    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>❌</span>" +
-    "<div>" +
-      "<p class='font-bold'>Error</p>" +
-      "<p class='text-sm'>Ocurrió un problema al procesar la solicitud.</p>" +
-    "</div>" +
-    "</div>",
-
-  "server":
-    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🔌</span>" +
-    "<div>" +
-      "<p class='font-bold'>Servidor no disponible</p>" +
-      "<p class='text-sm'>No se pudo conectar con el servidor de reservas.</p>" +
-    "</div>" +
-    "</div>",
-
-  "unauthorized":
-    "<div class='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>🔒</span>" +
-    "<div>" +
-      "<p class='font-bold'>No autorizado</p>" +
-      "<p class='text-sm'>No tienes permisos para realizar esta acción.</p>" +
-    "</div>" +
-    "</div>",
-
-  "deadline_passed":
-    "<div class='bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-    "<span class='text-2xl'>⏰</span>" +
-    "<div>" +
-      "<p class='font-bold'>Plazo vencido</p>" +
-      "<p class='text-sm'>Quedan menos de 24 horas para la fecha de la reserva.</p>" +
-    "</div>" +
-    "</div>",
-
-    "blocked_date": "<div class='bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-4 flex items-center gap-3'>" +
-      "<span class='text-2xl'>🚫</span>" +
-      "<div>" +
-        "<p class='font-bold'>Fecha Bloqueada</p>" +
-        "<p class='text-sm'>No se permiten reservas en esta fecha.</p>" +
-      "</div>" +
-    "</div>"
-};
-
-    if (msg && mensajes[msg]) {
-      mensaje.innerHTML = mensajes[msg];
-      history.replaceState(null, null, window.location.pathname);
-      
-      setTimeout(() => {
-          mensaje.innerHTML = '';
-      }, 5000);
+    if (!lista.length) {
+      tabla.innerHTML = "<tr><td colspan='8' class='text-center text-gray-500 py-8'>No hay reservas para estos filtros.</td></tr>";
+      return;
     }
 
-    const EQUIPMENT_NAMES = {
-      "1": "Proyector",
-      "2": "Micrófono",
-      "3": "Sonido"
-    };
+    tabla.innerHTML = lista.map(r =>
+      "<tr>" +
+      "<td class='font-mono text-gray-500'>#" + r.id + "</td>" +
+      "<td class='font-bold'>" + r.date + "</td>" +
+      "<td>" + r.start + " - " + r.end + "</td>" +
+      "<td>" + r.quantity + "</td>" +
+      "<td><span class='" + statusClass(r.status) + "'>" + r.status + "</span></td>" +
+      "<td class='max-w-[220px] truncate'>" + r.user + "</td>" +
+      "<td>" + renderEquipmentBadges(r.equipmentRaw, r.id) + "</td>" +
+      "<td>" + renderAcciones(r) + "</td>" +
+      "</tr>"
+    ).join("");
+  }
 
-    const equipmentMax = {
-      "1": 2,
-      "2": 5,
-      "3": 3
-    };
+  function cargarReservas() {
+    const loading = document.getElementById("loadingReservas");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    function inicializarEquipamientoForm() {
-      document.querySelectorAll(".equipment-check").forEach(check => {
-        check.addEventListener("change", function () {
-          const id = this.value;
-          const qtyInput = document.getElementById("eqQty_" + id);
-          if (this.checked) {
-            qtyInput.disabled = false;
-            qtyInput.value = 1;
-            qtyInput.min = 1;
-            qtyInput.classList.remove("bg-gray-100");
-          } else {
-            qtyInput.value = 0;
-            qtyInput.disabled = true;
-            qtyInput.classList.add("bg-gray-100");
-          }
-        });
-      });
-    }
+    loading.classList.remove("hidden");
+    document.getElementById("reservasMeta").textContent = "Cargando datos...";
 
-    function limpiarEquipamientoForm() {
-      document.querySelectorAll(".equipment-check").forEach(check => {
-        check.checked = false;
-      });
-      document.querySelectorAll(".equipment-qty").forEach(input => {
-        input.value = 0;
-        input.disabled = true;
-        input.classList.add("bg-gray-100");
-      });
-    }
-
-    function validarEquipamientoAdmin() {
-      const selectedEquipments = document.querySelectorAll(".equipment-check:checked");
-      for (const check of selectedEquipments) {
-        const id = check.value;
-        const qtyInput = document.getElementById("eqQty_" + id);
-        const qtyEq = parseInt(qtyInput.value || "0");
-        const maxEq = equipmentMax[id];
-        if (qtyEq < 1 || qtyEq > maxEq) {
-          mensaje.innerHTML =
-            "<div class='text-red-600'> Cantidad inválida para equipo. Máximo permitido: " + maxEq + "</div>";
-          return false;
-        }
-      }
-      return true;
-    }
-
-    function getEquipmentName(id) {
-      return EQUIPMENT_NAMES[id] || "Equipo " + id;
-    }
-
-    function parseEquipments(equipStr) {
-      if (!equipStr || equipStr.trim() === "") return [];
-      return equipStr.split(",").map(part => {
-        const [id, qty] = part.split(":");
-        return { id: id.trim(), qty: parseInt(qty.trim()) };
-      });
-    }
-
-    function renderEquipmentBadges(equipments, reservationId) {
-      if (!equipments || equipments.length === 0) {
-        return '<span class="text-gray-400 text-xs">-</span>';
-      }
-      return equipments.map(eq =>
-        '<span class="inline-flex items-center bg-gray-100 px-2 py-1 rounded text-xs mr-1 mb-1">' +
-          getEquipmentName(eq.id) + ' &times;' + eq.qty +
-          '<button type="button" onclick="eliminarEquipamento(' + reservationId + ', ' + eq.id + ')"' +
-          ' class="ml-1 text-red-500 hover:text-red-700 font-bold" title="Eliminar">&times;</button>' +
-        '</span>'
-      ).join("");
-    }
-
-    function puedeActuar(fecha) {
-      const reservaDate = new Date(fecha + "T00:00:00");
-      const limite = new Date(reservaDate.getTime() - 24 * 60 * 60 * 1000);
-      return new Date() < limite;
-    }
-
-    function renderAcciones(p) {
-      var id     = p[0];
-      var fecha  = p[1];
-      var estado = p[5];
-      var equip  = p[7] || '';
-      var activo = puedeActuar(fecha);
-      var bloqueado = !activo && (estado === 'PENDING' || estado === 'CONFIRMED');
-
-      var btns = '';
-
-      if (bloqueado) {
-        btns += '<span class="inline-block bg-orange-100 text-orange-700 border border-orange-300 text-xs px-2 py-1 rounded mb-1 w-full text-center">' +
-                'Menos de 24h para la reserva</span><br>';
-      }
-
-      if (estado === 'PENDING') {
-        if (activo) {
-          btns += '<button type="button" onclick="window.location.href=\'confirmReservation?id=' + id + '\'"' +
-                  ' class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700" title="Confirmar">&#10004;</button>';
+    fetch("listReservations?" + reservasQueryString(), { signal: controller.signal })
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        reservasTotal = parseInt(res.headers.get("X-Total-Count") || "0", 10);
+        return res.text();
+      })
+      .then(data => {
+        if (!data || !data.trim()) {
+          reservas = [];
+        } else if (data.startsWith("ERROR")) {
+          toast(data, "error");
+          reservas = [];
         } else {
-          btns += '<button type="button" disabled title="Plazo vencido"' +
-                  ' class="bg-gray-300 text-gray-500 px-2 py-1 rounded text-xs cursor-not-allowed">&#10004;</button>';
+          reservas = data.split("|").filter(r => r.trim()).map(parseReserva);
         }
-      }
+        renderReservas();
+        actualizarPaginacion();
+        actualizarMetricas();
+      })
+      .catch(err => {
+        console.error(err);
+        const isTimeout = err.name === "AbortError";
+        toast(isTimeout ? "El servidor tardo demasiado en responder." : "Error de conexion al cargar reservas.", "error");
+        document.getElementById("reservasMeta").textContent = isTimeout ? "Tiempo de espera agotado" : "No se pudieron cargar las reservas";
+        actualizarPaginacion();
+        document.getElementById("tabla").innerHTML = "<tr><td colspan='8' class='text-center text-red-600 py-8'>No se pudieron cargar los datos. Intenta actualizar.</td></tr>";
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        loading.classList.add("hidden");
+      });
+  }
 
-      if (estado === 'PENDING' || estado === 'CONFIRMED') {
-        if (activo) {
-          btns += '<button type="button" onclick="editar(' + id + ', \'' + fecha + '\', \'' + p[2] + '\', \'' + p[3] + '\', ' + p[4] + ', \'' + estado + '\')"' +
-                  ' class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 ml-1" title="Editar">&#9998;</button>';
-        } else {
-          btns += '<button type="button" disabled title="Plazo vencido"' +
-                  ' class="bg-gray-300 text-gray-500 px-2 py-1 rounded text-xs cursor-not-allowed ml-1">&#9998;</button>';
-        }
-      }
+  function editarReserva(id) {
+    const r = reservas.find(item => String(item.id) === String(id));
+    if (!r) return;
+    document.getElementById("idReserva").value = r.id;
+    document.getElementById("fechaInput").value = r.date;
+    document.getElementById("horaInicioInput").value = r.start;
+    document.getElementById("horaFinInput").value = r.end;
+    document.getElementById("cantidadInput").value = r.quantity;
+    document.getElementById("estadoInput").value = r.status;
+    document.getElementById("formReserva").action = "editReservation";
+    document.getElementById("btnGuardar").textContent = "Actualizar reserva";
+    document.getElementById("formTitle").textContent = "Editar Reserva #" + r.id;
+    document.getElementById("btnCancelar").classList.remove("hidden");
+    document.getElementById("btnCancelarTop").classList.remove("hidden");
+    document.getElementById("equipamientoCrearBox").classList.add("hidden");
+    limpiarEquipamientoForm();
+    showSection("crear");
+  }
 
-      btns += '<button type="button" onclick="eliminar(' + id + ')"' +
-              ' class="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 ml-1" title="Eliminar">&times;</button>';
+  function cancelarEdicion() {
+    document.getElementById("formReserva").reset();
+    document.getElementById("idReserva").value = "";
+    document.getElementById("estadoInput").value = "PENDING";
+    document.getElementById("formReserva").action = "ReservationServlet";
+    document.getElementById("btnGuardar").textContent = "Crear reserva";
+    document.getElementById("formTitle").textContent = "Crear Reserva";
+    document.getElementById("btnCancelar").classList.add("hidden");
+    document.getElementById("btnCancelarTop").classList.add("hidden");
+    document.getElementById("equipamientoCrearBox").classList.remove("hidden");
+    limpiarEquipamientoForm();
+  }
 
-      btns += '<button type="button" onclick="verEquipos(' + id + ', \'' + equip + '\')"' +
-              ' class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 ml-1" title="Ver equipos">&#128295;</button>';
+  function openConfirm(title, text, action, danger) {
+    pendingConfirm = action;
+    document.getElementById("confirmTitle").textContent = title;
+    document.getElementById("confirmText").textContent = text;
+    document.getElementById("confirmActionBtn").className = "btn " + (danger ? "btn-danger" : "btn-green");
+    document.getElementById("confirmModal").classList.add("on");
+  }
 
-      return btns;
-    }
+  function closeConfirm() {
+    document.getElementById("confirmModal").classList.remove("on");
+    pendingConfirm = null;
+  }
 
-    function cargarReservas() {
-  const loading = document.getElementById("loadingReservas");
-  const tabla = document.getElementById("tabla");
-  if (loading) loading.classList.remove("hidden");
-  if (tabla) tabla.innerHTML = "";
+  document.getElementById("confirmActionBtn").addEventListener("click", () => {
+    if (pendingConfirm) pendingConfirm();
+    closeConfirm();
+  });
 
-  fetch("listReservations")
-    .then(res => {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.text();
-    })
-    .then(data => {
-      var html = "";
+  function confirmarReserva(id) {
+    openConfirm("Confirmar reserva", "Deseas confirmar la reserva #" + id + "?", () => {
+      window.location.href = "confirmReservation?id=" + id;
+    }, false);
+  }
 
-      if (!data || data.trim() === "") {
-        html = "<tr><td colspan='8' class='p-4 text-gray-500'>No hay reservas</td></tr>";
-      } else if (data.startsWith("ERROR")) {
-        mensaje.innerHTML = "<div class='text-red-600'> " + data + "</div>";
-        html = "<tr><td colspan='8' class='p-4 text-red-500'>Error cargando datos</td></tr>";
-      } else {
-        var reservas = data.split("|").filter(r => r.trim());
-        reservas.forEach(r => {
-          var p = r.split(",");
-          var equipments = parseEquipments(p[7] || "");
-          var equipHtml = renderEquipmentBadges(equipments, p[0]);
-          var accionesHtml = renderAcciones(p);
-          html += "<tr class='border-b hover:bg-gray-50'>" +
-            "<td class='p-2 font-mono text-sm'>" + p[0] + "</td>" +
-            "<td class='p-2'>" + p[1] + "</td>" +
-            "<td class='p-2 text-sm'>" + p[2] + "-" + p[3] + "</td>" +
-            "<td class='p-2'>" + p[4] + "</td>" +
-            "<td class='p-2'><span class='px-2 py-1 rounded text-xs font-bold " + colorEstado(p[5]) + "'>" + p[5] + "</span></td>" +
-            "<td class='p-2 text-sm'>" + p[6] + "</td>" +
-            "<td class='p-2 text-left'>" + equipHtml + "</td>" +
-            "<td class='p-2'>" + accionesHtml + "</td>" +
-            "</tr>";
-        });
-      }
-
-      if (tabla) tabla.innerHTML = html;
-      if (loading) loading.classList.add("hidden");
-    })
-    .catch(err => {
-      console.error(err);
-      mensaje.innerHTML = "<div class='text-red-600'> Error de conexión al servidor</div>";
-      if (tabla) tabla.innerHTML = "<tr><td colspan='8' class='p-4 text-red-500'>Error de conexión</td></tr>";
-      if (loading) loading.classList.add("hidden");
-    });
-}
-
-    function colorEstado(e) {
-      if (e === "CONFIRMED") return "bg-green-100 text-green-700";
-      if (e === "PENDING")   return "bg-yellow-100 text-yellow-700";
-      if (e === "EXPIRED")   return "bg-gray-100 text-gray-500";
-      return "bg-gray-100";
-    }
-
-    function editar(id, fecha, inicio, fin, cantidad, estado) {
-      document.getElementById("idReserva").value = id;
-      document.getElementById("fechaInput").value = fecha;
-      document.getElementById("horaInicioInput").value = inicio;
-      document.getElementById("horaFinInput").value = fin;
-      document.getElementById("cantidadInput").value = cantidad;
-      document.getElementById("estadoInput").value = estado;
-
-      document.getElementById("formReserva").action = "editReservation";
-      document.getElementById("btnGuardar").innerText = "Actualizar";
-      document.getElementById("btnGuardar").classList.replace("bg-red-700", "bg-green-600");
-      document.getElementById("btnCancelar").classList.remove("hidden");
-
-      document.getElementById("equipamientoCrearBox").classList.add("hidden");
-      limpiarEquipamientoForm();
-    }
-
-    function cancelarEdicion() {
-      document.getElementById("formReserva").reset();
-      document.getElementById("idReserva").value = "";
-      document.getElementById("estadoInput").value = "PENDING";
-
-      document.getElementById("formReserva").action = "ReservationServlet";
-      document.getElementById("btnGuardar").innerText = "Crear";
-      document.getElementById("btnGuardar").classList.replace("bg-green-600", "bg-red-700");
-      document.getElementById("btnCancelar").classList.add("hidden");
-
-      document.getElementById("equipamientoCrearBox").classList.remove("hidden");
-      limpiarEquipamientoForm();
-    }
-
-    function eliminar(id) {
-      if (!confirm("¿Eliminar esta reserva?")) return;
-
+  function eliminar(id) {
+    openConfirm("Eliminar reserva", "Deseas eliminar la reserva #" + id + "? Esta accion no se puede deshacer.", () => {
       fetch("deleteReservation?id=" + id)
         .then(() => {
-          mensaje.innerHTML = "<div class='text-green-600'> Reserva eliminada</div>";
+          toast("Reserva eliminada.", "ok");
           cargarReservas();
         })
-        .catch(() => {
-          mensaje.innerHTML = "<div class='text-red-600'> Error al eliminar</div>";
-        });
-    }
+        .catch(() => toast("Error al eliminar la reserva.", "error"));
+    }, true);
+  }
 
-    function verEquipos(reservationId, equipStr) {
-      var equipments = parseEquipments(equipStr);
-      var container = document.getElementById("listaEquiposModal");
-      var html = "";
-
-      if (equipments.length === 0) {
-        html += "<p class='text-gray-500 text-sm mb-4'>Esta reserva no tiene equipamiento asignado.</p>";
-      } else {
-        html += equipments.map(eq => {
-          var max = equipmentMax[eq.id] || 10;
-          return "<div class='flex flex-col md:flex-row md:items-center md:justify-between bg-gray-50 p-3 rounded gap-3'>" +
-            "<div><span class='font-bold'>" + getEquipmentName(eq.id) + "</span>" +
-            "<span class='text-gray-500 text-sm ml-2'>Actual: " + eq.qty + "</span></div>" +
-            "<div class='flex items-center gap-2'>" +
-            "<input type='number' id='eq-qty-" + eq.id + "' value='" + eq.qty + "' class='w-20 border rounded px-2 py-1 text-sm' min='1' max='" + max + "'>" +
-            "<button type='button' onclick='actualizarEquipamento(" + reservationId + ", " + eq.id + ")' class='bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700'>Actualizar</button>" +
-            "<button type='button' onclick='eliminarEquipamento(" + reservationId + ", " + eq.id + ")' class='bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700'>Eliminar</button>" +
-            "</div></div>";
-        }).join("");
-      }
-
-      var existingIds = equipments.map(eq => String(eq.id));
-
-      var availableOptions = Object.keys(EQUIPMENT_NAMES)
-        .filter(id => !existingIds.includes(id))
-        .map(id => "<option value='" + id + "'>" + getEquipmentName(id) + " (máx. " + equipmentMax[id] + ")</option>")
-        .join("");
-
-      html += "<div class='border-t pt-4 mt-4'><h4 class='font-bold mb-2'>Agregar otro equipo</h4>";
-
-      if (availableOptions) {
-        html += "<div class='flex flex-col md:flex-row gap-2 md:items-center'>" +
-          "<select id='nuevoEquipoId' class='border rounded px-2 py-1 text-sm flex-1' onchange='actualizarMaxNuevoEquipo()'>" +
-          availableOptions + "</select>" +
-          "<input type='number' id='nuevoEquipoQty' class='border rounded px-2 py-1 text-sm w-24' value='1' min='1'>" +
-          "<button type='button' onclick='agregarEquipamento(" + reservationId + ")' class='bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700'>Agregar</button>" +
-          "</div>";
-      } else {
-        html += "<p class='text-gray-500 text-sm'>Todos los equipos ya están asignados a esta reserva.</p>";
-      }
-
-      html += "</div>";
-
-      if (equipments.length > 0) {
-        html += "<div class='border-t pt-4 mt-4'>" +
-          "<button type='button' onclick='eliminarTodosEquipos(" + reservationId + ")' class='bg-red-800 text-white px-3 py-2 rounded text-xs hover:bg-red-900'>Quitar todos los equipos</button>" +
-          "<p class='text-xs text-gray-500 mt-1'>Esto deja la reserva activa, pero sin equipamiento.</p>" +
-          "</div>";
-      }
-
-      container.innerHTML = html;
-      actualizarMaxNuevoEquipo();
-      document.getElementById("modalEquipos").classList.remove("hidden");
-    }
-
-    function actualizarMaxNuevoEquipo() {
-      var select = document.getElementById("nuevoEquipoId");
-      var qty = document.getElementById("nuevoEquipoQty");
-      if (!select || !qty) return;
-      var id = select.value;
-      var max = equipmentMax[id] || 1;
-      qty.max = max;
-      if (parseInt(qty.value || "1") > max) qty.value = max;
-    }
-
-    function cerrarModalEquipos() {
-      document.getElementById("modalEquipos").classList.add("hidden");
-      cargarReservas();
-    }
-
-    function actualizarEquipamento(reservationId, equipmentId) {
-      var input = document.getElementById("eq-qty-" + equipmentId);
-      var newQty = parseInt(input.value || "0");
-      var max = equipmentMax[String(equipmentId)] || 0;
-
-      if (newQty < 1 || newQty > max) {
-        alert("Cantidad inválida. Máximo permitido: " + max);
-        return;
-      }
-
-      var form = document.createElement("form");
-      form.method = "POST";
-      form.action = "admin/equipment";
-      form.innerHTML =
-        "<input type='hidden' name='action' value='update'>" +
-        "<input type='hidden' name='reservation_id' value='" + reservationId + "'>" +
-        "<input type='hidden' name='equipment_id' value='" + equipmentId + "'>" +
-        "<input type='hidden' name='quantity' value='" + newQty + "'>";
-      document.body.appendChild(form);
-      form.submit();
-    }
-
-    function agregarEquipamento(reservationId) {
-      var select = document.getElementById("nuevoEquipoId");
-      var qtyInput = document.getElementById("nuevoEquipoQty");
-
-      if (!select || !qtyInput) {
-        alert("No hay equipos disponibles para agregar.");
-        return;
-      }
-
-      var equipmentId = select.value;
-      var quantity = parseInt(qtyInput.value || "0");
-      var max = equipmentMax[String(equipmentId)] || 0;
-
-      if (quantity < 1 || quantity > max) {
-        alert("Cantidad inválida. Máximo permitido: " + max);
-        return;
-      }
-
-      var form = document.createElement("form");
-      form.method = "POST";
-      form.action = "admin/equipment";
-      form.innerHTML =
-        "<input type='hidden' name='action' value='add'>" +
-        "<input type='hidden' name='reservation_id' value='" + reservationId + "'>" +
-        "<input type='hidden' name='equipment_id' value='" + equipmentId + "'>" +
-        "<input type='hidden' name='quantity' value='" + quantity + "'>";
-      document.body.appendChild(form);
-      form.submit();
-    }
-
-    function eliminarEquipamento(reservationId, equipmentId) {
-      if (!confirm("¿Eliminar este equipamiento de la reserva?")) return;
-
-      var form = document.createElement("form");
-      form.method = "POST";
-      form.action = "admin/equipment";
-      form.innerHTML =
-        "<input type='hidden' name='action' value='delete'>" +
-        "<input type='hidden' name='reservation_id' value='" + reservationId + "'>" +
-        "<input type='hidden' name='equipment_id' value='" + equipmentId + "'>";
-      document.body.appendChild(form);
-      form.submit();
-    }
-
-    function eliminarTodosEquipos(reservationId) {
-      if (!confirm("¿Quitar todos los equipos de esta reserva? La reserva seguirá activa.")) return;
-
-      var form = document.createElement("form");
-      form.method = "POST";
-      form.action = "admin/equipment";
-      form.innerHTML =
-        "<input type='hidden' name='action' value='deleteAll'>" +
-        "<input type='hidden' name='reservation_id' value='" + reservationId + "'>";
-      document.body.appendChild(form);
-      form.submit();
-    }
-
-    function validarAdminForm() {
-      var fechaInput = document.getElementById("fechaInput").value;
-      if (!fechaInput) return false;
-
-      var hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      var fechaSeleccionada = new Date(fechaInput + "T00:00:00");
-
-      if (fechaSeleccionada < hoy) {
-        mensaje.innerHTML = "<div class='text-red-600'> No se permiten fechas pasadas</div>";
-        return false;
-      }
-
-      var inicio = document.getElementById("horaInicioInput").value;
-      var fin = document.getElementById("horaFinInput").value;
-
-      if (inicio >= fin) {
-        mensaje.innerHTML = "<div class='text-red-600'> Hora inválida</div>";
-        return false;
-      }
-
-      var cantidad = parseInt(document.getElementById("cantidadInput").value);
-      if (cantidad <= 0 || cantidad > 200) {
-        mensaje.innerHTML = "<div class='text-red-600'> Cantidad inválida</div>";
-        return false;
-      }
-
-      if (document.getElementById("formReserva").action.includes("editReservation")) {
-        return true;
-      }
-
-      return validarEquipamientoAdmin();
-    }
-
-    let todosLosLogs = [];
-
-    function cargarLogs() {
-      document.getElementById("mensajeLogs").innerHTML =
-        "<span class='text-gray-500'> Cargando bitácora...</span>";
-
-      fetch("listLogs")
-        .then(res => res.text())
-        .then(data => {
-          if (!data || data.trim() === "") {
-            todosLosLogs = [];
-            renderLogs([]);
-            document.getElementById("mensajeLogs").innerHTML =
-              "<span class='text-gray-500 text-sm'>Sin registros en la bitácora</span>";
-            return;
-          }
-
-          if (data === "unauthorized" || data === "forbidden" || data.startsWith("ERROR")) {
-            document.getElementById("mensajeLogs").innerHTML =
-              "<span class='text-red-600'> " + data + "</span>";
-            return;
-          }
-
-          todosLosLogs = data.split("|").filter(r => r.trim()).map(r => {
-            var p = r.split("~");
-            return {
-              id:          p[0] || "",
-              fecha:       p[1] || "",
-              usuario:     p[2] || "",
-              accion:      p[3] || "",
-              descripcion: p[4] || ""
-            };
-          });
-
-          document.getElementById("mensajeLogs").innerHTML =
-            "<span class='text-green-600 text-sm'> " + todosLosLogs.length + " registros</span>";
-
-          filtrarLogs();
-        })
-        .catch(() => {
-          document.getElementById("mensajeLogs").innerHTML =
-            "<span class='text-red-600'> Error al cargar bitácora</span>";
-        });
-    }
-
-    function filtrarLogs() {
-      var filtro = document.getElementById("filtroLog").value.toLowerCase();
-
-      var filtrados = filtro
-        ? todosLosLogs.filter(l =>
-            l.usuario.toLowerCase().includes(filtro) ||
-            l.accion.toLowerCase().includes(filtro))
-        : todosLosLogs;
-
-      renderLogs(filtrados);
-    }
-
-    function colorAccion(accion) {
-      if (accion.includes("OK") || accion.includes("CONFIRM")) return "bg-green-100 text-green-700";
-      if (accion.includes("REJECT") || accion.includes("ERROR") || accion.includes("DELETE")) return "bg-red-100 text-red-700";
-      if (accion.includes("TTL")) return "bg-gray-100 text-gray-500";
-      if (accion.includes("ATTEMPT") || accion.includes("EDIT")) return "bg-yellow-100 text-yellow-700";
-      return "bg-blue-100 text-blue-700";
-    }
-
-    function renderLogs(logs) {
-      if (logs.length === 0) {
-        document.getElementById("tablaLogs").innerHTML =
-          "<tr><td colspan='5' class='p-6 text-gray-400 text-center'>Sin registros</td></tr>";
-        return;
-      }
-
-      var html = logs.map(l => {
-        var esEdit = l.accion === "EDIT_OK";
-        var detailRow = "";
-
-        if (esEdit) {
-          var campos = {};
-          l.descripcion.split(";").forEach(par => {
-            var kv = par.split("=");
-            if (kv[0] && kv[1]) campos[kv[0].trim()] = kv[1].trim();
-          });
-
-          detailRow = "<tr id='detail-" + l.id + "' class='hidden bg-red-50 border-b'>" +
-            "<td colspan='5' class='px-6 py-3'>" +
-            "<div class='text-sm font-bold text-red-800 mb-2'>Detalle de edición — Reserva #" + (campos.id || "") + "</div>" +
-            "<div class='grid grid-cols-2 gap-2 text-xs text-gray-700'>" +
-            "<div class='bg-white rounded p-2 shadow-sm'><span class='font-bold text-gray-500 uppercase text-xs'>Fecha</span><div class='mt-1 text-sm'>" + (campos.fecha || "-") + "</div></div>" +
-            "<div class='bg-white rounded p-2 shadow-sm'><span class='font-bold text-gray-500 uppercase text-xs'>Horario</span><div class='mt-1 text-sm'>" + (campos.inicio || "-") + " → " + (campos.fin || "-") + "</div></div>" +
-            "<div class='bg-white rounded p-2 shadow-sm'><span class='font-bold text-gray-500 uppercase text-xs'>Asistentes</span><div class='mt-1 text-sm'>" + (campos.asistentes || "-") + "</div></div>" +
-            "</div></td></tr>";
+  function inicializarEquipamientoForm() {
+    document.querySelectorAll(".equipment-check").forEach(check => {
+      check.addEventListener("change", function () {
+        const id = this.value;
+        const qtyInput = document.getElementById("eqQty_" + id);
+        if (this.checked) {
+          qtyInput.disabled = false;
+          qtyInput.value = 1;
+          qtyInput.min = 1;
+          qtyInput.classList.remove("bg-gray-100");
+        } else {
+          qtyInput.value = 0;
+          qtyInput.disabled = true;
+          qtyInput.classList.add("bg-gray-100");
         }
+      });
+    });
+  }
 
-        return "<tr class='border-b hover:bg-gray-50 " + (esEdit ? "cursor-pointer" : "") + "'" +
-          (esEdit ? " onclick=\"toggleDetalle('" + l.id + "')\"" : "") + ">" +
-          "<td class='p-2 font-mono text-xs text-gray-400'>" + l.id + "</td>" +
-          "<td class='p-2 text-xs text-gray-600 whitespace-nowrap'>" + l.fecha + "</td>" +
-          "<td class='p-2 text-xs'>" + l.usuario + "</td>" +
-          "<td class='p-2'><span class='px-2 py-1 rounded text-xs font-bold " + colorAccion(l.accion) + "'>" + l.accion + "</span>" +
-          (esEdit ? "<span class='ml-1 text-xs text-gray-400'> ver detalle</span>" : "") + "</td>" +
-          "<td class='p-2 text-xs text-left text-gray-500 italic'>" + (esEdit ? "Clic para ver qué se editó" : l.descripcion) + "</td>" +
-          "</tr>" + detailRow;
+  function limpiarEquipamientoForm() {
+    document.querySelectorAll(".equipment-check").forEach(check => check.checked = false);
+    document.querySelectorAll(".equipment-qty").forEach(input => {
+      input.value = 0;
+      input.disabled = true;
+      input.classList.add("bg-gray-100");
+    });
+  }
+
+  function validarEquipamientoAdmin() {
+    for (const check of document.querySelectorAll(".equipment-check:checked")) {
+      const id = check.value;
+      const qty = parseInt(document.getElementById("eqQty_" + id).value || "0", 10);
+      const max = equipmentMax[id];
+      if (qty < 1 || qty > max) {
+        toast("Cantidad invalida para " + getEquipmentName(id) + ". Maximo: " + max, "warn");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function validarAdminForm() {
+    const fecha = document.getElementById("fechaInput").value;
+    const inicio = document.getElementById("horaInicioInput").value;
+    const fin = document.getElementById("horaFinInput").value;
+    const cantidad = parseInt(document.getElementById("cantidadInput").value || "0", 10);
+
+    if (!fecha) return false;
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const fechaSeleccionada = new Date(fecha + "T00:00:00");
+    if (fechaSeleccionada < hoy) { toast("No se permiten fechas pasadas.", "warn"); return false; }
+    if (!inicio || !fin || inicio >= fin) { toast("Hora invalida.", "warn"); return false; }
+    if (cantidad < 1 || cantidad > 200) { toast("Cantidad invalida.", "warn"); return false; }
+    if (document.getElementById("formReserva").action.includes("editReservation")) return true;
+    return validarEquipamientoAdmin();
+  }
+
+  function verEquipos(reservationId, equipStr) {
+    const equipments = parseEquipments(equipStr);
+    const container = document.getElementById("listaEquiposModal");
+    let html = "";
+
+    if (!equipments.length) {
+      html += "<p class='text-gray-500 text-sm'>Esta reserva no tiene equipamiento asignado.</p>";
+    } else {
+      html += equipments.map(eq => {
+        const max = equipmentMax[eq.id] || 10;
+        return "<div class='flex flex-col md:flex-row md:items-center md:justify-between bg-gray-50 p-4 rounded-xl gap-3'>" +
+          "<div><span class='font-extrabold'>" + getEquipmentName(eq.id) + "</span><span class='text-gray-500 text-sm ml-2'>Actual: " + eq.qty + "</span></div>" +
+          "<div class='flex items-center gap-2'>" +
+          "<input type='number' id='eq-qty-" + eq.id + "' value='" + eq.qty + "' class='input w-24' min='1' max='" + max + "'>" +
+          "<button type='button' onclick='actualizarEquipamento(" + reservationId + ", " + eq.id + ")' class='btn btn-blue text-xs'>Actualizar</button>" +
+          "<button type='button' onclick='eliminarEquipamento(" + reservationId + ", " + eq.id + ")' class='btn btn-danger text-xs'>Eliminar</button>" +
+          "</div></div>";
       }).join("");
-
-      document.getElementById("tablaLogs").innerHTML = html;
     }
 
-    function toggleDetalle(id) {
-      var row = document.getElementById("detail-" + id);
-      if (row) row.classList.toggle("hidden");
+    const existingIds = equipments.map(eq => String(eq.id));
+    const options = Object.keys(EQUIPMENT_NAMES)
+      .filter(id => !existingIds.includes(id))
+      .map(id => "<option value='" + id + "'>" + getEquipmentName(id) + " (max. " + equipmentMax[id] + ")</option>")
+      .join("");
+
+    html += "<div class='border-t border-gray-200 pt-4 mt-4'><h4 class='font-extrabold mb-3'>Agregar equipo</h4>";
+    if (options) {
+      html += "<div class='flex flex-col md:flex-row gap-2 md:items-center'>" +
+        "<select id='nuevoEquipoId' class='input flex-1' onchange='actualizarMaxNuevoEquipo()'>" + options + "</select>" +
+        "<input type='number' id='nuevoEquipoQty' class='input w-24' value='1' min='1'>" +
+        "<button type='button' onclick='agregarEquipamento(" + reservationId + ")' class='btn btn-green'>Agregar</button>" +
+        "</div>";
+    } else {
+      html += "<p class='text-gray-500 text-sm'>Todos los equipos ya estan asignados.</p>";
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-      inicializarEquipamientoForm();
-      cargarReservas();
-    });
+    if (equipments.length > 0) {
+      html += "<button type='button' onclick='eliminarTodosEquipos(" + reservationId + ")' class='btn btn-danger mt-4'>Quitar todos</button>";
+    }
+    html += "</div>";
 
-    window.addEventListener("load", function() {
+    container.innerHTML = html;
+    actualizarMaxNuevoEquipo();
+    document.getElementById("modalEquipos").classList.add("on");
+  }
+
+  function actualizarMaxNuevoEquipo() {
+    const select = document.getElementById("nuevoEquipoId");
+    const qty = document.getElementById("nuevoEquipoQty");
+    if (!select || !qty) return;
+    const max = equipmentMax[select.value] || 1;
+    qty.max = max;
+    if (parseInt(qty.value || "1", 10) > max) qty.value = max;
+  }
+
+  function cerrarModalEquipos() {
+    document.getElementById("modalEquipos").classList.remove("on");
+    cargarReservas();
+  }
+
+  function submitEquipmentForm(html) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "admin/equipment";
+    form.innerHTML = html;
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function actualizarEquipamento(reservationId, equipmentId) {
+    const input = document.getElementById("eq-qty-" + equipmentId);
+    const qty = parseInt(input.value || "0", 10);
+    const max = equipmentMax[String(equipmentId)] || 0;
+    if (qty < 1 || qty > max) { toast("Cantidad invalida. Maximo: " + max, "warn"); return; }
+    submitEquipmentForm("<input type='hidden' name='action' value='update'><input type='hidden' name='reservation_id' value='" + reservationId + "'><input type='hidden' name='equipment_id' value='" + equipmentId + "'><input type='hidden' name='quantity' value='" + qty + "'>");
+  }
+
+  function agregarEquipamento(reservationId) {
+    const select = document.getElementById("nuevoEquipoId");
+    const qtyInput = document.getElementById("nuevoEquipoQty");
+    if (!select || !qtyInput) return;
+    const equipmentId = select.value;
+    const qty = parseInt(qtyInput.value || "0", 10);
+    const max = equipmentMax[String(equipmentId)] || 0;
+    if (qty < 1 || qty > max) { toast("Cantidad invalida. Maximo: " + max, "warn"); return; }
+    submitEquipmentForm("<input type='hidden' name='action' value='add'><input type='hidden' name='reservation_id' value='" + reservationId + "'><input type='hidden' name='equipment_id' value='" + equipmentId + "'><input type='hidden' name='quantity' value='" + qty + "'>");
+  }
+
+  function eliminarEquipamento(reservationId, equipmentId) {
+    openConfirm("Eliminar equipo", "Deseas quitar este equipo de la reserva?", () => {
+      submitEquipmentForm("<input type='hidden' name='action' value='delete'><input type='hidden' name='reservation_id' value='" + reservationId + "'><input type='hidden' name='equipment_id' value='" + equipmentId + "'>");
+    }, true);
+  }
+
+  function eliminarTodosEquipos(reservationId) {
+    openConfirm("Quitar todos los equipos", "La reserva seguira activa, pero sin equipamiento.", () => {
+      submitEquipmentForm("<input type='hidden' name='action' value='deleteAll'><input type='hidden' name='reservation_id' value='" + reservationId + "'>");
+    }, true);
+  }
+
+  function cargarLogs() {
+    document.getElementById("mensajeLogs").textContent = "Cargando bitacora...";
+    fetch("listLogs?" + logsQueryString())
+      .then(res => {
+        logsTotal = parseInt(res.headers.get("X-Total-Count") || "0", 10);
+        return res.text();
+      })
+      .then(data => {
+        if (!data || !data.trim()) {
+          todosLosLogs = [];
+        } else if (data === "unauthorized" || data === "forbidden" || data.startsWith("ERROR")) {
+          document.getElementById("mensajeLogs").textContent = data;
+          return;
+        } else {
+          todosLosLogs = data.split("|").filter(r => r.trim()).map(r => {
+            const p = r.split("~");
+            return { id:p[0]||"", fecha:p[1]||"", usuario:p[2]||"", accion:p[3]||"", descripcion:p[4]||"" };
+          });
+        }
+        document.getElementById("mensajeLogs").textContent = todosLosLogs.length + " visibles en esta pagina, " + logsTotal + " en total";
+        renderLogs(todosLosLogs);
+        actualizarPaginacionLogs();
+      })
+      .catch(() => {
+        document.getElementById("mensajeLogs").textContent = "Error al cargar bitacora";
+        actualizarPaginacionLogs();
+      });
+  }
+
+  function logsQueryString() {
+    const params = new URLSearchParams();
+    params.set("page", logsPage);
+    params.set("size", logsPageSize);
+    const filtro = document.getElementById("filtroLog").value.trim();
+    if (filtro) params.set("search", filtro);
+    return params.toString();
+  }
+
+  function totalPaginasLogs() {
+    return Math.max(1, Math.ceil(logsTotal / logsPageSize));
+  }
+
+  function actualizarPaginacionLogs() {
+    const totalPages = totalPaginasLogs();
+    document.getElementById("logsPaginacionInfo").textContent =
+      "Pagina " + logsPage + " de " + totalPages + " - " + logsTotal + " registros";
+    document.getElementById("btnPrevLogsPage").disabled = logsPage <= 1;
+    document.getElementById("btnNextLogsPage").disabled = logsPage >= totalPages;
+  }
+
+  function cambiarPaginaLogs(delta) {
+    const nextPage = logsPage + delta;
+    if (nextPage < 1 || nextPage > totalPaginasLogs()) return;
+    logsPage = nextPage;
+    cargarLogs();
+  }
+
+  function cambiarTamanoLogs() {
+    logsPageSize = parseInt(document.getElementById("logsPageSizeSelect").value || "20", 10);
+    logsPage = 1;
+    cargarLogs();
+  }
+
+  function programarCargaLogs() {
+    clearTimeout(logsFilterTimer);
+    logsFilterTimer = setTimeout(() => {
+      logsPage = 1;
       cargarLogs();
-    });
+    }, 300);
+  }
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") cerrarModalEquipos();
-    });
-    </script>  
-    <div class="grid grid-cols-2 gap-4 p-6">
-    <div class="bg-white p-4 shadow rounded"><canvas id="chartBar"></canvas></div>
-    <div class="bg-white p-4 shadow rounded"><canvas id="chartDoughnut"></canvas></div>
-  </div>
+  function colorAccion(accion) {
+    if (accion.includes("OK") || accion.includes("CONFIRM")) return "status status-confirmed";
+    if (accion.includes("REJECT") || accion.includes("ERROR") || accion.includes("DELETE")) return "status bg-red-100 text-red-700";
+    if (accion.includes("TTL")) return "status status-expired";
+    if (accion.includes("ATTEMPT") || accion.includes("EDIT")) return "status status-pending";
+    return "status bg-blue-100 text-blue-700";
+  }
 
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      setTimeout(() => {
-        cargarGraficos();
-      }, 500);
-    });
+  function renderLogs(logs) {
+    const tabla = document.getElementById("tablaLogs");
+    if (!logs.length) {
+      tabla.innerHTML = "<tr><td colspan='5' class='text-center text-gray-500 py-8'>Sin registros</td></tr>";
+      return;
+    }
+    tabla.innerHTML = logs.map(l =>
+      "<tr>" +
+      "<td class='font-mono text-gray-500'>#" + l.id + "</td>" +
+      "<td>" + l.fecha + "</td>" +
+      "<td class='max-w-[220px] truncate'>" + l.usuario + "</td>" +
+      "<td><span class='" + colorAccion(l.accion) + "'>" + l.accion + "</span></td>" +
+      "<td class='text-gray-600'>" + l.descripcion + "</td>" +
+      "</tr>"
+    ).join("");
+  }
 
-function cargarGraficos() {
-  fetch("stats")
-    .then(res => {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    })
-    .then(data => {
-      console.log("📊 Datos recibidos para gráficos:", data);
-      
-      const ctx1 = document.getElementById("chartReservasDia");
-      if (ctx1 && data.labels && data.counts) {
-        new Chart(ctx1, {
+  function cargarGraficos(force) {
+    if (chartsLoaded && !force) return;
+    if (typeof Chart === "undefined") {
+      toast("No se pudo cargar la libreria de graficos.", "warn");
+      return;
+    }
+
+    const range = document.getElementById("statsRange") ? document.getElementById("statsRange").value : "all";
+    fetch("stats?range=" + encodeURIComponent(range))
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(data => {
+        if (chartDia) chartDia.destroy();
+        if (chartEstados) chartEstados.destroy();
+
+        chartDia = new Chart(document.getElementById("chartReservasDia"), {
           type: "bar",
           data: {
-            labels: data.labels,
-            datasets: [{
-              label: "Reservas",
-              data: data.counts,
-              backgroundColor: "#3b82f6",
-              borderRadius: 6
-            }]
+            labels: data.labels || [],
+            datasets: [{ label: "Reservas", data: data.counts || [], backgroundColor: "#034991", borderRadius: 7 }]
           },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-          }
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
         });
-      }
-
-      const ctx2 = document.getElementById("chartEstados");
-      if (ctx2 && data.statusLabels && data.statusCounts) {
-        new Chart(ctx2, {
+        chartEstados = new Chart(document.getElementById("chartEstados"), {
           type: "doughnut",
           data: {
-            labels: data.statusLabels,
-            datasets: [{
-              data: data.statusCounts,
-              backgroundColor: ["#CD1719", "#034991", "#A7A7A9", "#9ca3af"],
-              borderWidth: 0
-            }]
+            labels: data.statusLabels || [],
+            datasets: [{ data: data.statusCounts || [], backgroundColor:["#f59e0b","#16a34a","#9ca3af","#dc2626"], borderWidth:0 }]
           },
-          options: {
-            responsive: true,
-            plugins: { legend: { position: "bottom" } }
-          }
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:"bottom" } } }
         });
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error cargando gráficos:", err);
-      console.warn(" Cargando gráficos con datos de prueba...");
-      renderGraficosPrueba();
-    });
-}
-
-function renderGraficosPrueba() {
-  new Chart(document.getElementById("chartReservasDia"), {
-    type: "bar",
-    data: { labels: ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"], datasets: [{ label: "Demo", data: [3,5,2,4,6,1,0], backgroundColor: "#3b82f6" }] }
-  });
-  new Chart(document.getElementById("chartEstados"), {
-    type: "doughnut",
-    data: { labels: ["PENDING","CONFIRMED","EXPIRED"], datasets: [{ data: [2,5,1], backgroundColor: ["#fbbf24","#22c55e","#ef4444"] }] }
-  });
-}
-  </script>
-  
-  <script>
-  if (typeof tailwind === 'undefined') {
-    console.warn("⚠️ Tailwind no cargó, recargando...");
-    location.reload();
+        chartsLoaded = true;
+      })
+      .catch(err => {
+        console.error(err);
+        toast("No se pudieron cargar las estadisticas.", "warn");
+      });
   }
+
+  function aplicarMensajeUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get("msg");
+    if (msg && URL_MSGS[msg]) {
+      toast(URL_MSGS[msg][0], URL_MSGS[msg][1]);
+      history.replaceState(null, null, window.location.pathname);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    verificarSesion();
+    inicializarEquipamientoForm();
+    aplicarMensajeUrl();
+    cargarReservas();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      document.getElementById("modalEquipos").classList.remove("on");
+      closeConfirm();
+    }
+  });
 </script>
 </body>
 </html>

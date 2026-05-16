@@ -1,49 +1,20 @@
 package Controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.*;
-import util.Config;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import service.ReservationService;
 
 /**
- * Servlet that retrieves all reservations from the backend server for the
- * admin panel.
- *
- * <p>Mapped to {@code /listReservations}, this servlet handles HTTP GET
- * requests and forwards a {@code LIST} command to the backend socket server
- * on {@code localhost:5000}. The raw response is passed directly to the
- * frontend, which parses and renders it as the reservations table.
- *
- * <p>Authorization rules:
- * <ul>
- *   <li>No active session → HTTP 401, body {@code "ERROR: unauthorized"}.</li>
- *   <li>Active session with a non-ADMIN role → HTTP 403, body
- *       {@code "ERROR: forbidden"}.</li>
- * </ul>
- *
- * <p>The socket protocol sends a single line:
- * <pre>{@code
- * LIST
- * }</pre>
- * and expects the server to reply with a pipe-delimited list of reservations.
- * Each entry uses comma separation for its fields:
- * <pre>{@code
- * <id>,<date>,<startTime>,<endTime>,<quantity>,<status>,<user>,<equipment>|...
- * }</pre>
- * An empty string is written if the server response is {@code null}.
- * On socket failure, HTTP 500 is set and the body begins with
- * {@code "ERROR: server"}.
- *
- * @see DeleteReservationServlet
- * @see ConfirmReservationServlet
- * @see EditReservationServlet
+ * Lists reservations for the admin panel.
  */
 @WebServlet("/listReservations")
 public class ListReservationsServlet extends HttpServlet {
+
+    private final ReservationService reservationService = new ReservationService();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -68,63 +39,37 @@ public class ListReservationsServlet extends HttpServlet {
         }
 
         try {
-        String socketHost = Config.getSocketHost();
-        int socketPort = Config.getSocketPort();
+            int page = parseInt(req.getParameter("page"), 1);
+            int size = parseInt(req.getParameter("size"), 10);
+            String search = req.getParameter("search");
+            String status = req.getParameter("status");
+            String date = req.getParameter("date");
 
-        System.out.println("[ListReservations] ⏱️ Conectando a: " + socketHost + ":" + socketPort);
-        long startConnect = System.currentTimeMillis();
+            page = Math.max(page, 1);
+            size = Math.max(1, Math.min(size, 50));
 
-        Socket socket = new Socket();
-        socket.connect(
-            new java.net.InetSocketAddress(socketHost, socketPort),
-            5000  
-        );
+            int total = reservationService.countActiveReservations(search, status, date);
+            resp.setHeader("X-Total-Count", String.valueOf(total));
+            resp.setHeader("X-Page", String.valueOf(page));
+            resp.setHeader("X-Page-Size", String.valueOf(size));
+            resp.getWriter().write(reservationService.listReservations(page, size, search, status, date));
+        } catch (Exception e) {
+            System.err.println("[ListReservations] ERROR: " + e.getMessage());
+            e.printStackTrace();
+            resp.setStatus(500);
+            resp.getWriter().write("ERROR: server");
+        }
+    }
 
-        System.out.println("[ListReservations] ✅ Conectado en " + (System.currentTimeMillis() - startConnect) + "ms");
-
-        socket.setSoTimeout(15000); 
-
-        try (
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
-        ) {
-            System.out.println("[ListReservations] 📤 Enviando comando LIST...");
-            long startSend = System.currentTimeMillis();
-
-            out.println("LIST");
-            out.flush();  
-
-            System.out.println("[ListReservations] 📥 Esperando respuesta...");
-            String responseServer = in.readLine();
-
-            System.out.println("[ListReservations] ✅ Respuesta recibida en " + (System.currentTimeMillis() - startSend) + "ms");
-            System.out.println("[ListReservations] 📦 Tamaño respuesta: " + (responseServer != null ? responseServer.length() : 0) + " caracteres");
-
-            if (responseServer == null) {
-                responseServer = "";
-            }
-
-            resp.getWriter().write(responseServer);
+    private int parseInt(String value, int fallback) {
+        if (value == null || value.trim().isEmpty()) {
+            return fallback;
         }
 
-        socket.close();
-
-    } catch (java.net.ConnectException e) {
-        System.err.println("[ListReservations] ❌ ERROR: No se pudo conectar. ¿ServerGUI está corriendo?");
-        e.printStackTrace();
-        resp.setStatus(503);
-        resp.getWriter().write("ERROR: server unavailable");
-
-    } catch (java.net.SocketTimeoutException e) {
-        System.err.println("[ListReservations] ❌ ERROR: ServerGUI no respondió en 15 segundos. Revisa si la BD está lenta o hay bloqueo.");
-        resp.setStatus(504);
-        resp.getWriter().write("ERROR: server timeout");
-
-    } catch (Exception e) {
-        System.err.println("[ListReservations] ❌ ERROR: " + e.getMessage());
-        e.printStackTrace();
-        resp.setStatus(500);
-        resp.getWriter().write("ERROR: server");
-    }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 }

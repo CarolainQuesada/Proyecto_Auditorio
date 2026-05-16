@@ -1,10 +1,7 @@
 package Controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
+import service.ReservationService;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 
@@ -13,9 +10,8 @@ import javax.servlet.http.*;
  * authenticated CLIENT user.
  *
  * <p>Mapped to {@code /myReservations}, this servlet handles HTTP GET
- * requests and forwards a {@code MY_RESERVATIONS;<email>} command to the
- * backend socket server on {@code localhost:5000}. The raw pipe-delimited
- * response is passed directly to the frontend for rendering.
+ * requests and queries the reservation service directly. The raw
+ * pipe-delimited response is passed directly to the frontend for rendering.
  *
  * <p>Authorization rules:
  * <ul>
@@ -33,6 +29,8 @@ import javax.servlet.http.*;
  */
 @WebServlet("/myReservations")
 public class MyReservationsServlet extends HttpServlet {
+
+    private final ReservationService reservationService = new ReservationService();
 
     /**
      * Fetches and returns the authenticated user's reservations as a
@@ -67,20 +65,9 @@ public class MyReservationsServlet extends HttpServlet {
 
         String email = session.getAttribute("emailUsuario").toString();
 
-        try (
-            Socket socket = new Socket("localhost", 5000);
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        ) {
-            out.println("MY_RESERVATIONS;" + email);
-            String responseServer = in.readLine();
-
-            if (responseServer == null) {
-                responseServer = "";
-            }
-
-            resp.getWriter().write(responseServer);
-
+        try {
+            String response = reservationService.listReservationsByUser(email);
+            resp.getWriter().write(response != null ? response : "");
         } catch (Exception e) {
             e.printStackTrace();
             resp.setStatus(500);

@@ -13,13 +13,27 @@ public class Config {
                 props.load(input);
             }
         } catch (IOException e) {
-            System.err.println("️ config.properties no encontrado, usando valores por defecto");
+            System.err.println("config.properties no encontrado, usando valores por defecto");
         }
     }
 
-    public static String getDbUrl() { return props.getProperty("db.url"); }
-    public static String getDbUser() { return props.getProperty("db.user"); }
-    public static String getDbPassword() { return props.getProperty("db.password"); }
-    public static String getSocketHost() { return props.getProperty("socket.host", "127.0.0.1"); }
-    public static int getSocketPort() { return Integer.parseInt(props.getProperty("socket.port", "5000")); }
+    public static String getDbUrl() {
+        return props.getProperty("db.url");
+    }
+
+    public static String getDbUser() {
+        return props.getProperty("db.user");
+    }
+
+    public static String getDbPassword() {
+        return props.getProperty("db.password");
+    }
+
+    public static String getSocketHost() {
+        return props.getProperty("socket.host", "127.0.0.1");
+    }
+
+    public static int getSocketPort() {
+        return Integer.parseInt(props.getProperty("socket.port", "5000"));
+    }
 }

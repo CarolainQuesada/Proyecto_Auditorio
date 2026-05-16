@@ -76,7 +76,13 @@ public class TTLMonitor extends Thread {
             try {
                 gui.log("TTL running... expiration threshold: " + TTL_MINUTES + " minutes");
 
-                int expired = new ReservationDAO().cleanExpired(TTL_MINUTES);
+                CalendarLock.lock();
+                int expired;
+                try {
+                    expired = new ReservationDAO().cleanExpired(TTL_MINUTES);
+                } finally {
+                    CalendarLock.unlock();
+                }
 
                 if (expired > 0) {
                     gui.log("TTL expired reservations: " + expired);

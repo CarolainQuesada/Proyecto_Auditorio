@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>Gestión de Espacios - UNA</title>
+  <script>
+    if (window.location.protocol === "file:") {
+      window.location.href = "http://localhost:8080/AuditorioUNA/dashboard.html";
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
@@ -112,12 +117,40 @@
     /* ── Preset pills ── */
     .preset { padding: 6px 12px; border-radius: 20px; border: 1.5px solid #e5e0de; background: #fff; font-size: 12px; font-weight: 500; color: #666; cursor: pointer; transition: all .15s; font-family: 'DM Sans',sans-serif; }
     .preset:hover { border-color: #9e0000; color: #9e0000; }
+    .period-tabs { display:flex; gap:10px; margin-bottom:16px; }
+    .period-tab {
+      flex:1; border:1.5px solid #e5e0de; background:#fff; color:#666; border-radius:10px;
+      padding:12px; font-weight:700; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif;
+    }
+    .period-tab.active { border-color:#9e0000; background:#fff2f2; color:#9e0000; }
+    .slot-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .slot-card {
+      border:1.5px solid #e5e0de; background:#fff; border-radius:12px; padding:14px;
+      text-align:left; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif;
+    }
+    .slot-card:hover:not(:disabled) { border-color:#9e0000; background:#fff8f8; }
+    .slot-card.active { border-color:#9e0000; background:#9e0000; color:#fff; }
+    .slot-card:disabled { background:#f3f4f6; color:#9ca3af; cursor:not-allowed; border-color:#e5e7eb; }
+    .slot-time { font-size:15px; font-weight:700; display:block; }
+    .slot-state { font-size:11px; margin-top:3px; display:block; }
 
     /* ── Summary ── */
     .sum-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ede9e8; font-size: 14px; }
     .sum-row:last-child { border: none; }
     .sum-lbl { color: #999; }
     .sum-val { font-weight: 600; color: #1a0a0a; }
+    .side-summary {
+      display: none; border-top: 1px solid #ede9e8; padding-top: 16px; margin-top: 18px;
+    }
+    .side-summary.on { display: block; }
+    .mini-row { display:flex; justify-content:space-between; gap:10px; padding:7px 0; font-size:12px; border-bottom:1px dashed #f0eeec; }
+    .mini-row:last-child { border-bottom:0; }
+    .mini-lbl { color:#aaa; }
+    .mini-val { color:#333; font-weight:600; text-align:right; max-width:135px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .field-error {
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.10);
+    }
 
     /* ── Notif ── */
     .notif { border-radius: 10px; padding: 11px 16px; font-size: 13px; font-weight: 500; display: none; align-items: center; gap: 8px; margin-bottom: 20px; }
@@ -125,9 +158,25 @@
     .notif.ok  { background: #f0faf5; color: #166534; border: 1px solid #bbf7d0; }
     .notif.err { background: #fff2f2; color: #991b1b; border: 1px solid #fecaca; }
     .notif.inf { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(17, 24, 39, 0.42); display: none;
+      align-items: center; justify-content: center; padding: 20px; z-index: 50;
+    }
+    .modal-backdrop.on { display: flex; }
+    .modal {
+      width: min(100%, 440px); background: #fff; border-radius: 14px; border: 1px solid #ede9e8;
+      box-shadow: 0 24px 70px rgba(17, 24, 39, 0.20); padding: 26px;
+    }
+    body.checking-session .layout { visibility: hidden; }
+    .session-loader {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: #f8f7f5; color: #9e0000; font-size: 14px; font-weight: 600; z-index: 100;
+    }
+    body.checking-session .session-loader { display: flex; }
   </style>
 </head>
-<body>
+<body class="checking-session">
+<div class="session-loader">Verificando sesión...</div>
 <div class="layout">
 
   <!-- ══ SIDEBAR ══ -->
@@ -186,6 +235,14 @@
         </div>
       </li>
     </ul>
+
+    <div class="side-summary" id="sideSummary">
+      <p style="font-size:11px;font-weight:700;color:#9e0000;text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px;">Resumen</p>
+      <div class="mini-row"><span class="mini-lbl">Fecha</span><span class="mini-val" id="miniFecha">Pendiente</span></div>
+      <div class="mini-row"><span class="mini-lbl">Hora</span><span class="mini-val" id="miniHora">Pendiente</span></div>
+      <div class="mini-row"><span class="mini-lbl">Personas</span><span class="mini-val" id="miniPersonas">1</span></div>
+      <div class="mini-row"><span class="mini-lbl">Equipo</span><span class="mini-val" id="miniEquipo">Ninguno</span></div>
+    </div>
 
     <!-- Bottom nav -->
     <div style="border-top:1px solid #ede9e8;padding-top:16px;">
@@ -271,32 +328,19 @@
       <!-- ── PANEL 2: Horario ── -->
       <div class="panel card" id="panel2">
         <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">¿A qué hora?</p>
-        <p style="font-size:13px;color:#aaa;margin:0 0 20px;" id="p2fecha"></p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 16px;" id="p2fecha"></p>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div>
-            <label class="inp-label">Hora de inicio</label>
-            <input type="time" id="start_time" class="inp" onchange="validateStep2()">
-          </div>
-          <div>
-            <label class="inp-label">Hora de finalización</label>
-            <input type="time" id="end_time" class="inp" onchange="validateStep2()">
-          </div>
+        <input type="hidden" id="start_time">
+        <input type="hidden" id="end_time">
+
+        <div class="period-tabs">
+          <button class="period-tab active" id="periodMorning" onclick="selectPeriod('morning')">Mañana</button>
+          <button class="period-tab" id="periodAfternoon" onclick="selectPeriod('afternoon')">Tarde</button>
         </div>
+
+        <div id="slotGrid" class="slot-grid"></div>
 
         <p id="durLabel" style="font-size:13px;text-align:center;min-height:18px;margin-bottom:14px;"></p>
-
-        <div>
-          <p style="font-size:11px;color:#bbb;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Horarios frecuentes</p>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="preset" onclick="setT('07:00','09:00')">7:00 – 9:00</button>
-            <button class="preset" onclick="setT('08:00','10:00')">8:00 – 10:00</button>
-            <button class="preset" onclick="setT('10:00','12:00')">10:00 – 12:00</button>
-            <button class="preset" onclick="setT('13:00','15:00')">13:00 – 15:00</button>
-            <button class="preset" onclick="setT('15:00','17:00')">15:00 – 17:00</button>
-            <button class="preset" onclick="setT('18:00','20:00')">18:00 – 20:00</button>
-          </div>
-        </div>
 
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
           <button class="btn-out" onclick="goStep(1)">← Atrás</button>
@@ -399,6 +443,7 @@
         </div>
 
         <form id="reservaForm" action="ReservationServlet" method="POST" style="display:none;">
+          <input type="hidden" name="action" value="reservar">
           <input type="hidden" name="date" id="f_date">
           <input type="hidden" name="start_time" id="f_start">
           <input type="hidden" name="end_time" id="f_end">
@@ -407,12 +452,29 @@
 
         <div style="display:flex;justify-content:space-between;">
           <button class="btn-out" onclick="goStep(3)">← Atrás</button>
-          <button class="btn-red" id="btnSubmit" onclick="submitForm()">✓ Confirmar reservación</button>
+          <button class="btn-red" id="btnSubmit" onclick="openConfirmModal()">✓ Confirmar reservación</button>
         </div>
       </div>
 
     </div>
   </main>
+</div>
+
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <p class="font-headline" style="font-size:22px;color:#1a0a0a;margin:0 0 6px;">Confirmar reserva</p>
+    <p style="font-size:13px;color:#777;margin:0 0 18px;">Revisa estos datos antes de enviar la solicitud.</p>
+    <div style="background:#faf9f7;border-radius:12px;padding:16px;margin-bottom:18px;">
+      <div class="sum-row"><span class="sum-lbl">Fecha</span><span class="sum-val" id="modalF">-</span></div>
+      <div class="sum-row"><span class="sum-lbl">Horario</span><span class="sum-val" id="modalH">-</span></div>
+      <div class="sum-row"><span class="sum-lbl">Asistentes</span><span class="sum-val" id="modalA">-</span></div>
+      <div class="sum-row"><span class="sum-lbl">Equipo</span><span class="sum-val" id="modalE">Ninguno</span></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn-out" type="button" onclick="closeConfirmModal()">Revisar</button>
+      <button class="btn-red" type="button" id="modalSubmitBtn" onclick="submitForm()">Reservar ahora</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -422,13 +484,34 @@
   const eqQty  = {1:1, 2:1, 3:1};
   let step = 1;
   let selDate = '';
+  let selectedPeriod = 'morning';
+  let reservedSlots = [];
   let calM = new Date().getMonth();
   let calY = new Date().getFullYear();
+  let reservationStarted = false;
+  const TIME_SLOTS = {
+    morning: [
+      ['07:00','08:00'],
+      ['08:00','09:00'],
+      ['09:00','10:00'],
+      ['10:00','11:00'],
+      ['11:00','12:00']
+    ],
+    afternoon: [
+      ['13:00','14:00'],
+      ['14:00','15:00'],
+      ['15:00','16:00'],
+      ['16:00','17:00'],
+      ['18:00','19:00'],
+      ['19:00','20:00']
+    ]
+  };
 
   /* ── Session ── */
   fetch('currentUser').then(r=>r.text()).then(e=>{
     if(!e||e==='NO_SESSION'){ window.location.href='index.html'; return; }
     document.getElementById('usuarioSidebar').textContent = e;
+    document.body.classList.remove('checking-session');
   }).catch(()=>window.location.href='index.html');
 
   /* ── Notifications ── */
@@ -441,10 +524,113 @@
     hour:['Hora de inicio debe ser menor que hora de fin.','err'],
     quantity:['Cantidad debe estar entre 1 y 200.','err'],
     past:['No se permiten fechas pasadas.','err'],
+    unknown_action:['No se pudo procesar la reserva. Intenta de nuevo.','err'],
     error:['Error interno del servidor.','err'],
     server:['Servidor no disponible.','err'],
   };
   function notif(txt,cls){ const el=document.getElementById('notif'); el.innerHTML=txt; el.className='notif on '+cls; setTimeout(()=>el.className='notif',5000); }
+  function markField(id, hasError){
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('field-error', hasError);
+  }
+  function selectedEquipmentText(shortText){
+    const names={1:'Proyector',2:'Microfono',3:'Sonido'};
+    const parts=[];
+    [1,2,3].forEach(id=>{ if(eqSel[id]) parts.push(names[id]+' x'+eqQty[id]); });
+    if(!parts.length) return 'Ninguno';
+    return shortText && parts.length>1 ? parts.length+' tipos' : parts.join(', ');
+  }
+  function formattedSelectedDate(){
+    if(!selDate) return 'Pendiente';
+    const [y,m,d]=selDate.split('-');
+    const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return parseInt(d)+' de '+months[parseInt(m)-1]+' de '+y;
+  }
+  function updateMiniSummary(){
+    const box=document.getElementById('sideSummary');
+    if(box && reservationStarted) box.classList.add('on');
+    const s=document.getElementById('start_time').value;
+    const e=document.getElementById('end_time').value;
+    document.getElementById('miniFecha').textContent=formattedSelectedDate();
+    document.getElementById('miniHora').textContent=s&&e?s+' - '+e:'Pendiente';
+    document.getElementById('miniPersonas').textContent=document.getElementById('quantity').value||'1';
+    document.getElementById('miniEquipo').textContent=selectedEquipmentText(true);
+  }
+  function timeToMinutes(value){
+    const parts=value.split(':');
+    return (parseInt(parts[0],10)*60)+parseInt(parts[1],10);
+  }
+  function overlapsReserved(start,end){
+    const startMin=timeToMinutes(start);
+    const endMin=timeToMinutes(end);
+    return reservedSlots.some(slot => {
+      const slotStart=timeToMinutes(slot.start);
+      const slotEnd=timeToMinutes(slot.end);
+      return slot.status !== 'EXPIRED' && startMin < slotEnd && endMin > slotStart;
+    });
+  }
+  function clearSelectedTime(){
+    document.getElementById('start_time').value='';
+    document.getElementById('end_time').value='';
+    document.getElementById('durLabel').textContent='';
+    document.getElementById('btn2').disabled=true;
+    updateMiniSummary();
+  }
+  async function loadReservedSlots(){
+    reservedSlots=[];
+    clearSelectedTime();
+    renderSlots();
+    if(!selDate) return;
+    try {
+      const res=await fetch('reservedSlots?date='+encodeURIComponent(selDate));
+      if(!res.ok) return;
+      const text=await res.text();
+      reservedSlots=text.split('|')
+        .filter(Boolean)
+        .map(item => {
+          const parts=item.split(',');
+          return { start: parts[0], end: parts[1], status: parts[2] || '' };
+        });
+      renderSlots();
+    } catch(e) {
+      notif('No se pudieron consultar las horas reservadas.','err');
+    }
+  }
+  function selectPeriod(period){
+    selectedPeriod=period;
+    document.getElementById('periodMorning').classList.toggle('active', period==='morning');
+    document.getElementById('periodAfternoon').classList.toggle('active', period==='afternoon');
+    clearSelectedTime();
+    renderSlots();
+  }
+  function renderSlots(){
+    const grid=document.getElementById('slotGrid');
+    if(!grid) return;
+    const slots=TIME_SLOTS[selectedPeriod];
+    grid.innerHTML=slots.map(([start,end]) => {
+      const occupied=overlapsReserved(start,end);
+      const active=document.getElementById('start_time').value===start && document.getElementById('end_time').value===end;
+      return `<button type="button"
+        class="slot-card${active?' active':''}"
+        ${occupied?'disabled':''}
+        onclick="selectSlot('${start}','${end}')">
+        <span class="slot-time">${start} - ${end}</span>
+        <span class="slot-state">${occupied?'Hora ocupada':'Disponible'}</span>
+      </button>`;
+    }).join('');
+  }
+  function selectSlot(start,end){
+    document.getElementById('start_time').value=start;
+    document.getElementById('end_time').value=end;
+    validateStep2();
+    renderSlots();
+  }
+  function validateDetails(){
+    const q=parseInt(document.getElementById('quantity').value);
+    const invalid=!q||q<1||q>200;
+    markField('quantity', invalid);
+    return !invalid;
+  }
   const p=new URLSearchParams(location.search); const m=p.get('msg');
   if(m&&URL_MSGS[m]) setTimeout(()=>notif(URL_MSGS[m][0],URL_MSGS[m][1]),200);
   history.replaceState(null,'',location.pathname);
@@ -454,6 +640,7 @@
   let ttlInterval = null;
 
   function iniciarReserva() {
+    reservationStarted = true;
     document.getElementById('panel0').classList.remove('active');
     step = 1;
     document.getElementById('panel' + step).classList.add('active');
@@ -473,6 +660,7 @@
     badge.style.display = 'block';
     const steps = document.getElementById('stepsList');
     if (steps) { steps.style.visibility = 'visible'; steps.style.opacity = '1'; }
+    updateMiniSummary();
 
     function tick() {
       const elapsed   = Date.now() - startTime;
@@ -511,16 +699,15 @@
 
   /* ── Step control ── */
   function goStep(n){
-    if(n===2&&!selDate){ notif('Seleccioná una fecha primero.','inf'); return; }
+    if(n===2&&!selDate){ notif('Selecciona una fecha primero.','inf'); return; }
     if(n===3){
       const s=document.getElementById('start_time').value;
       const e=document.getElementById('end_time').value;
-      if(!s||!e){ notif('Ingresá hora de inicio y fin.','inf'); return; }
+      if(!s||!e){ notif('Selecciona una hora disponible.','inf'); return; }
       if(s>=e){ notif('La hora de inicio debe ser menor que la hora de fin.','err'); return; }
     }
     if(n===4){
-      const q=parseInt(document.getElementById('quantity').value);
-      if(!q||q<1||q>200){ notif('La cantidad debe estar entre 1 y 200.','err'); return; }
+      if(!validateDetails()){ notif('La cantidad debe estar entre 1 y 200.','err'); return; }
       buildSummary();
     }
     document.getElementById('panel'+step).classList.remove('active');
@@ -591,6 +778,8 @@
     document.getElementById('fechaLabel').textContent=' '+lbl;
     document.getElementById('p2fecha').textContent=' '+lbl;
     document.getElementById('btn1').disabled=false;
+    loadReservedSlots();
+    updateMiniSummary();
   }
 
   function cambiarMes(d){ calM+=d; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
@@ -610,8 +799,8 @@
       lbl.textContent='La hora de inicio debe ser menor que la hora de fin.';
       lbl.style.color='#dc2626'; btn.disabled=true;
     } else { lbl.textContent=''; btn.disabled=true; }
+    updateMiniSummary();
   }
-  function setT(s,e){ document.getElementById('start_time').value=s; document.getElementById('end_time').value=e; validateStep2(); }
 
   /* ── Step 3 ── */
   function dq(d){ const inp=document.getElementById('quantity'); inp.value=Math.max(1,Math.min(200,parseInt(inp.value||1)+d)); updateBar(); }
@@ -620,6 +809,8 @@
     const p=Math.max(0.5,(q/200)*100);
     document.getElementById('capBar').style.width=p+'%';
     document.getElementById('capTxt').textContent=q>=1&&q<=200?q+' de 200 ('+Math.round(p)+'%)':'';
+    validateDetails();
+    updateMiniSummary();
   }
   updateBar();
 
@@ -628,30 +819,46 @@
     document.getElementById('ec'+id).classList.toggle('sel',eqSel[id]);
     document.getElementById('er'+id).style.display=eqSel[id]?'flex':'none';
     document.getElementById('eqQty_'+id).value=eqSel[id]?eqQty[id]:0;
+    updateMiniSummary();
   }
-  function chEq(e,id,d){ e.stopPropagation(); eqQty[id]=Math.max(1,Math.min(EQ_MAX[id],eqQty[id]+d)); document.getElementById('ed'+id).textContent=eqQty[id]; document.getElementById('eqQty_'+id).value=eqSel[id]?eqQty[id]:0; }
+  function chEq(e,id,d){ e.stopPropagation(); eqQty[id]=Math.max(1,Math.min(EQ_MAX[id],eqQty[id]+d)); document.getElementById('ed'+id).textContent=eqQty[id]; document.getElementById('eqQty_'+id).value=eqSel[id]?eqQty[id]:0; updateMiniSummary(); }
 
   /* ── Summary ── */
   function buildSummary(){
-    const [y,m,d]=selDate.split('-');
-    const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    document.getElementById('sumF').textContent=parseInt(d)+' de '+months[parseInt(m)-1]+' de '+y;
     const s=document.getElementById('start_time').value;
     const e=document.getElementById('end_time').value;
-    document.getElementById('sumH').textContent=s+' – '+e;
+    const formattedDate=formattedSelectedDate();
+    const attendees=document.getElementById('quantity').value+' personas';
+    const equipmentText=selectedEquipmentText(false);
+    document.getElementById('sumF').textContent=formattedDate;
+    document.getElementById('sumH').textContent=s+' - '+e;
     const mins=(+e.split(':')[0]*60+ +e.split(':')[1])-(+s.split(':')[0]*60+ +s.split(':')[1]);
     document.getElementById('sumD').textContent=(Math.floor(mins/60)>0?Math.floor(mins/60)+'h ':'')+(mins%60>0?mins%60+'min':'');
-    document.getElementById('sumA').textContent=document.getElementById('quantity').value+' personas';
-    const names={1:'Proyector',2:'Micrófono',3:'Sonido'};
-    const parts=[];
-    [1,2,3].forEach(id=>{ if(eqSel[id]) parts.push(names[id]+'×'+eqQty[id]); });
-    document.getElementById('sumE').textContent=parts.length?parts.join(', '):'Ninguno';
+    document.getElementById('sumA').textContent=attendees;
+    document.getElementById('sumE').textContent=equipmentText;
+    document.getElementById('modalF').textContent=formattedDate;
+    document.getElementById('modalH').textContent=s+' - '+e;
+    document.getElementById('modalA').textContent=attendees;
+    document.getElementById('modalE').textContent=equipmentText;
+    updateMiniSummary();
   }
 
   /* ── Submit ── */
+  function openConfirmModal(){
+    if(!validateDetails()){ notif('La cantidad debe estar entre 1 y 200.','err'); return; }
+    buildSummary();
+    document.getElementById('confirmModal').classList.add('on');
+  }
+
+  function closeConfirmModal(){
+    document.getElementById('confirmModal').classList.remove('on');
+  }
+
   function submitForm(){
     const btn=document.getElementById('btnSubmit');
-    btn.disabled=true; btn.textContent='⏳ Procesando...';
+    const modalBtn=document.getElementById('modalSubmitBtn');
+    btn.disabled=true; btn.textContent='Reservando...';
+    modalBtn.disabled=true; modalBtn.textContent='Reservando...';
     document.getElementById('f_date').value=selDate;
     document.getElementById('f_start').value=document.getElementById('start_time').value;
     document.getElementById('f_end').value=document.getElementById('end_time').value;
@@ -671,3 +878,4 @@
 </script>
 </body>
 </html>
+

@@ -244,6 +244,42 @@ public class ReservationEquipmentDAO {
     }
 
     /**
+     * Deletes equipment rows for several reservations using the provided
+     * transactional connection.
+     *
+     * @param con            the active transactional connection
+     * @param reservationIds reservation IDs whose equipment rows should be removed
+     * @return {@code true} on success; {@code false} on error
+     */
+    public boolean deleteByReservationIds(Connection con, List<Integer> reservationIds) {
+        if (reservationIds == null || reservationIds.isEmpty()) {
+            return true;
+        }
+
+        StringBuilder sql = new StringBuilder(
+                "DELETE FROM reservation_equipment WHERE reservation_id IN ("
+        );
+        for (int i = 0; i < reservationIds.size(); i++) {
+            if (i > 0) {
+                sql.append(",");
+            }
+            sql.append("?");
+        }
+        sql.append(")");
+
+        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            for (int i = 0; i < reservationIds.size(); i++) {
+                ps.setInt(i + 1, reservationIds.get(i));
+            }
+            ps.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] deleteByReservationIds: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Deletes a single equipment record identified by both reservation ID and
      * equipment ID.
      *

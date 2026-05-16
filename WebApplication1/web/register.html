@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Registro UNA</title>
 
+<script>
+if (window.location.protocol === "file:") {
+  window.location.href = "http://localhost:8080/AuditorioUNA/register.html";
+}
+</script>
+
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Newsreader&family=Public+Sans&display=swap" rel="stylesheet"/>
@@ -37,6 +43,34 @@ tailwind.config = {
 <style>
 body { font-family: 'Public Sans', sans-serif; }
 h1 { font-family: 'Newsreader', serif; }
+
+.una-logo {
+  display: block;
+  width: min(100%, 340px);
+  height: auto;
+  margin: 0 auto;
+}
+
+.field-help {
+  min-height: 18px;
+}
+
+.toggle-password {
+  align-items: center;
+  color: #6b7280;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  position: absolute;
+  right: 10px;
+  top: 0;
+  transition: color 0.15s ease;
+  width: 34px;
+}
+
+.toggle-password:hover {
+  color: #CC0000;
+}
 </style>
 
 </head>
@@ -67,11 +101,11 @@ h1 { font-family: 'Newsreader', serif; }
 <div class="p-10">
 
 <div class="text-center mb-10">
-<h1 class="text-4xl font-bold text-primary">UNA</h1>
+<img src="assets/una-logo.png" alt="Universidad Nacional Costa Rica" class="una-logo"/>
 <p class="text-gray-600 mt-2">Registro Institucional</p>
 </div>
 
-<form action="register" method="POST" class="space-y-6">
+<form id="registerForm" action="register" method="POST" class="space-y-6" novalidate>
 
 <div id="errorBox" class="hidden bg-red-100 text-red-700 p-3 rounded text-sm text-center">
 Error en el registro
@@ -88,6 +122,7 @@ person
 </span>
 
 <input 
+id="email"
 name="email"
 type="email"
 placeholder="usuario@una.ac.cr"
@@ -96,6 +131,7 @@ required
 autocomplete="email"
 />
 </div>
+<p id="emailHelp" class="field-help mt-1 text-xs text-gray-500">Debe terminar en @una.ac.cr</p>
 </div>
 
 <div>
@@ -109,14 +145,22 @@ lock
 </span>
 
 <input 
+id="password"
 name="password"
 type="password"
 placeholder="Mínimo 3 caracteres"
-class="w-full pl-10 pr-4 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
+class="w-full pl-10 pr-12 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
 required
 autocomplete="new-password"
 />
+<button type="button" class="toggle-password" data-target="password" aria-label="Mostrar contrasena">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
 </div>
+<div class="mt-2 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+<div id="strengthBar" class="h-full w-0 rounded-full bg-gray-300 transition-all"></div>
+</div>
+<p id="passwordHelp" class="field-help mt-1 text-xs text-gray-500">Minimo 3 caracteres</p>
 </div>
 
 <div>
@@ -130,17 +174,23 @@ lock
 </span>
 
 <input 
+id="confirmPassword"
 name="confirmPassword"
 type="password"
 placeholder="Repita la contraseña"
-class="w-full pl-10 pr-4 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
+class="w-full pl-10 pr-12 py-3 border border-outline focus:border-primary focus:ring-1 focus:ring-primary rounded outline-none transition"
 required
 autocomplete="new-password"
 />
+<button type="button" class="toggle-password" data-target="confirmPassword" aria-label="Mostrar confirmacion">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
 </div>
+<p id="confirmHelp" class="field-help mt-1 text-xs text-gray-500">Repita la misma contrasena</p>
 </div>
 
 <button 
+id="submitBtn"
 type="submit"
 class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded shadow-md hover:shadow-lg transition-all uppercase tracking-widest text-sm"
 >
@@ -188,6 +238,122 @@ const params = new URLSearchParams(window.location.search);
  * @type {HTMLElement}
  */
 const errorBox = document.getElementById("errorBox");
+const form = document.getElementById("registerForm");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const confirmInput = document.getElementById("confirmPassword");
+const submitBtn = document.getElementById("submitBtn");
+const emailHelp = document.getElementById("emailHelp");
+const passwordHelp = document.getElementById("passwordHelp");
+const confirmHelp = document.getElementById("confirmHelp");
+const strengthBar = document.getElementById("strengthBar");
+
+function setFieldState(input, help, valid, message, neutral) {
+  help.innerText = message;
+  input.classList.remove("border-red-400", "border-green-500", "focus:border-red-500", "focus:ring-red-100");
+  help.classList.remove("text-red-600", "text-green-700", "text-gray-500");
+
+  if (neutral) {
+    help.classList.add("text-gray-500");
+    return;
+  }
+
+  input.classList.add(valid ? "border-green-500" : "border-red-400");
+  if (!valid) {
+    input.classList.add("focus:border-red-500", "focus:ring-red-100");
+  }
+  help.classList.add(valid ? "text-green-700" : "text-red-600");
+}
+
+function validateEmail(showNeutral) {
+  const email = emailInput.value.trim().toLowerCase();
+  if (!email) {
+    setFieldState(emailInput, emailHelp, false, "Debe terminar en @una.ac.cr", showNeutral);
+    return false;
+  }
+
+  const valid = /^[^\s@]+@una\.ac\.cr$/.test(email);
+  setFieldState(emailInput, emailHelp, valid, valid ? "Correo institucional valido" : "Use un correo @una.ac.cr", false);
+  return valid;
+}
+
+function updateStrength() {
+  const value = passwordInput.value;
+  let score = 0;
+
+  if (value.length >= 3) score += 1;
+  if (value.length >= 6) score += 1;
+  if (/[A-Z]/.test(value) && /[0-9]/.test(value)) score += 1;
+
+  const widths = ["0%", "35%", "70%", "100%"];
+  const colors = ["bg-gray-300", "bg-red-500", "bg-yellow-500", "bg-green-600"];
+
+  strengthBar.classList.remove("bg-gray-300", "bg-red-500", "bg-yellow-500", "bg-green-600");
+  strengthBar.classList.add(colors[score]);
+  strengthBar.style.width = widths[score];
+}
+
+function validatePassword(showNeutral) {
+  const valid = passwordInput.value.length >= 3;
+  updateStrength();
+  if (!passwordInput.value) {
+    setFieldState(passwordInput, passwordHelp, false, "Minimo 3 caracteres", showNeutral);
+    return false;
+  }
+
+  const label = valid ? "Contrasena lista" : "La contrasena debe tener minimo 3 caracteres";
+  setFieldState(passwordInput, passwordHelp, valid, label, false);
+  return valid;
+}
+
+function validateConfirm(showNeutral) {
+  const hasValue = confirmInput.value.length > 0;
+  const valid = hasValue && confirmInput.value === passwordInput.value;
+
+  if (!hasValue) {
+    setFieldState(confirmInput, confirmHelp, false, "Repita la misma contrasena", showNeutral);
+    return false;
+  }
+
+  setFieldState(confirmInput, confirmHelp, valid, valid ? "Las contrasenas coinciden" : "Las contrasenas no coinciden", false);
+  return valid;
+}
+
+function validateForm(showNeutral) {
+  const emailOk = validateEmail(showNeutral);
+  const passwordOk = validatePassword(showNeutral);
+  const confirmOk = validateConfirm(showNeutral);
+  return emailOk && passwordOk && confirmOk;
+}
+
+emailInput.addEventListener("input", () => validateEmail(false));
+passwordInput.addEventListener("input", () => {
+  validatePassword(false);
+  if (confirmInput.value) validateConfirm(false);
+});
+confirmInput.addEventListener("input", () => validateConfirm(false));
+
+document.querySelectorAll(".toggle-password").forEach((button) => {
+  button.addEventListener("click", () => {
+    const input = document.getElementById(button.dataset.target);
+    const icon = button.querySelector(".material-symbols-outlined");
+    const isHidden = input.type === "password";
+    input.type = isHidden ? "text" : "password";
+    icon.innerText = isHidden ? "visibility_off" : "visibility";
+  });
+});
+
+form.addEventListener("submit", (event) => {
+  if (!validateForm(false)) {
+    event.preventDefault();
+    mostrarError("Revise los campos marcados antes de crear la cuenta");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Creando cuenta...";
+  submitBtn.classList.add("opacity-80", "cursor-wait");
+});
 
 /**
  * Displays an error message in the registration page.

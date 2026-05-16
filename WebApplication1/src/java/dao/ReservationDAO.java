@@ -6,7 +6,9 @@ import util.DBConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Data Access Object for reservation-related database operations.
@@ -122,13 +124,152 @@ public class ReservationDAO {
 
     public List<Reservation> getAll() {
         List<Reservation> list = new ArrayList<>();
-        String sql = "SELECT * FROM reservations WHERE status != 'EXPIRED' ORDER BY id DESC LIMIT 10";
+        String sql = "SELECT * FROM reservations ORDER BY id DESC LIMIT 10";
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) list.add(mapReservation(rs));
         } catch (SQLException e) { System.err.println("[DAO ERROR] getAll: " + e.getMessage()); }
         return list;
+    }
+
+    public List<Reservation> getAllWithEquipment() {
+        return getAllWithEquipment(1, 10);
+    }
+
+    public List<Reservation> getAllWithEquipment(int page, int pageSize) {
+        return getAllWithEquipment(page, pageSize, "", "ALL", "");
+    }
+
+    public List<Reservation> getAllWithEquipment(int page, int pageSize, String search, String status, String date) {
+        Map<Integer, Reservation> reservations = new LinkedHashMap<>();
+        int safePage = Math.max(page, 1);
+        int safePageSize = Math.max(1, Math.min(pageSize, 50));
+        int offset = (safePage - 1) * safePageSize;
+        List<Object> params = new ArrayList<>();
+
+        String sql = "SELECT r.*, re.id AS re_id, re.equipment_id, re.quantity AS equipment_quantity "
+                + "FROM ("
+                + "  SELECT * FROM reservations ";
+
+        StringBuilder filters = new StringBuilder();
+        appendReservationFilters(filters, params, search, status, date);
+
+        sql += filters
+                + "  ORDER BY id DESC "
+                + "  LIMIT ? OFFSET ?"
+                + ") r "
+                + "LEFT JOIN reservation_equipment re ON re.reservation_id = r.id "
+                + "ORDER BY r.id DESC";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            int index = 1;
+            for (Object param : params) {
+                ps.setObject(index++, param);
+            }
+            ps.setInt(index++, safePageSize);
+            ps.setInt(index, offset);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int reservationId = rs.getInt("id");
+                    Reservation reservation = reservations.get(reservationId);
+
+                    if (reservation == null) {
+                        reservation = mapReservation(rs);
+                        reservations.put(reservationId, reservation);
+                    }
+
+                    int equipmentRowId = rs.getInt("re_id");
+                    if (!rs.wasNull()) {
+                        ReservationEquipment equipment = new ReservationEquipment();
+                        equipment.setId(equipmentRowId);
+                        equipment.setReservationId(reservationId);
+                        equipment.setEquipmentId(rs.getInt("equipment_id"));
+                        equipment.setQuantity(rs.getInt("equipment_quantity"));
+                        reservation.addEquipment(equipment);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] getAllWithEquipment: " + e.getMessage());
+        }
+
+        return new ArrayList<>(reservations.values());
+    }
+
+    public int countActiveReservations() {
+        return countActiveReservations("", "ALL", "");
+    }
+
+    public int countActiveReservations(String search, String status, String date) {
+        String sql = "SELECT COUNT(*) FROM reservations";
+        List<Object> params = new ArrayList<>();
+        StringBuilder filters = new StringBuilder();
+        appendReservationFilters(filters, params, search, status, date);
+        sql += filters;
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            int index = 1;
+            for (Object param : params) {
+                ps.setObject(index++, param);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] countActiveReservations: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
+    private void appendReservationFilters(StringBuilder sql, List<Object> params, String search, String status, String date) {
+        List<String> conditions = new ArrayList<>();
+
+        if (status != null && !status.trim().isEmpty() && !"ALL".equalsIgnoreCase(status.trim())) {
+            conditions.add("status = ?");
+            params.add(status.trim().toUpperCase());
+        }
+
+        if (date != null && !date.trim().isEmpty()) {
+            conditions.add("date = ?");
+            params.add(date.trim());
+        }
+
+        if (search != null && !search.trim().isEmpty()) {
+            String term = "%" + search.trim() + "%";
+            conditions.add("("
+                    + "CAST(id AS CHAR) LIKE ? OR "
+                    + "CAST(date AS CHAR) LIKE ? OR "
+                    + "user LIKE ? OR "
+                    + "status LIKE ? OR "
+                    + "EXISTS ("
+                    + "  SELECT 1 FROM reservation_equipment re "
+                    + "  LEFT JOIN equipment e ON e.id = re.equipment_id "
+                    + "  WHERE re.reservation_id = reservations.id "
+                    + "  AND (CAST(re.equipment_id AS CHAR) LIKE ? OR e.name LIKE ?)"
+                    + ")"
+                    + ")");
+            params.add(term);
+            params.add(term);
+            params.add(term);
+            params.add(term);
+            params.add(term);
+            params.add(term);
+        }
+
+        if (!conditions.isEmpty()) {
+            sql.append(" WHERE ").append(String.join(" AND ", conditions)).append(" ");
+        }
     }
 
     public List<Reservation> getByDate(String date) {
@@ -155,6 +296,47 @@ public class ReservationDAO {
             }
         } catch (SQLException e) { System.err.println("[DAO ERROR] getByUser: " + e.getMessage()); }
         return list;
+    }
+
+    public List<Reservation> getByUserWithEquipment(String email) {
+        Map<Integer, Reservation> reservations = new LinkedHashMap<>();
+        String sql = "SELECT r.*, re.id AS re_id, re.equipment_id, re.quantity AS equipment_quantity "
+                + "FROM reservations r "
+                + "LEFT JOIN reservation_equipment re ON re.reservation_id = r.id "
+                + "WHERE r.user = ? "
+                + "ORDER BY r.date DESC, r.start_time DESC, r.id DESC";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int reservationId = rs.getInt("id");
+                    Reservation reservation = reservations.get(reservationId);
+
+                    if (reservation == null) {
+                        reservation = mapReservation(rs);
+                        reservations.put(reservationId, reservation);
+                    }
+
+                    int equipmentRowId = rs.getInt("re_id");
+                    if (!rs.wasNull()) {
+                        ReservationEquipment equipment = new ReservationEquipment();
+                        equipment.setId(equipmentRowId);
+                        equipment.setReservationId(reservationId);
+                        equipment.setEquipmentId(rs.getInt("equipment_id"));
+                        equipment.setQuantity(rs.getInt("equipment_quantity"));
+                        reservation.addEquipment(equipment);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] getByUserWithEquipment: " + e.getMessage());
+        }
+
+        return new ArrayList<>(reservations.values());
     }
 
     public Reservation getById(int id) {
@@ -261,14 +443,68 @@ public class ReservationDAO {
     }
 
     public int cleanExpired(int ttlMinutes) {
-        String sql = "UPDATE reservations SET status = 'EXPIRED' WHERE status = 'PENDING' AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?";
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, ttlMinutes);
-            int rows = ps.executeUpdate();
-            System.out.println("[DAO] Reservas expiradas: " + rows);
+        String selectSql = "SELECT id FROM reservations "
+                + "WHERE status = 'PENDING' "
+                + "AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?";
+        String updateSql = "UPDATE reservations SET status = 'EXPIRED' "
+                + "WHERE status = 'PENDING' "
+                + "AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?";
+
+        Connection con = null;
+        try {
+            con = DBConnection.getConnection();
+            con.setAutoCommit(false);
+
+            List<Integer> expiredIds = new ArrayList<>();
+            try (PreparedStatement ps = con.prepareStatement(selectSql)) {
+                ps.setInt(1, ttlMinutes);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        expiredIds.add(rs.getInt("id"));
+                    }
+                }
+            }
+
+            if (expiredIds.isEmpty()) {
+                con.commit();
+                return 0;
+            }
+
+            int rows;
+            try (PreparedStatement ps = con.prepareStatement(updateSql)) {
+                ps.setInt(1, ttlMinutes);
+                rows = ps.executeUpdate();
+            }
+
+            if (!equipmentDAO.deleteByReservationIds(con, expiredIds)) {
+                con.rollback();
+                return 0;
+            }
+
+            con.commit();
+            System.out.println("[DAO] Reservas expiradas: " + rows
+                    + "; equipamiento liberado: " + expiredIds.size());
             return rows;
-        } catch (SQLException e) { System.err.println("[DAO ERROR] cleanExpired: " + e.getMessage()); return 0; }
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] cleanExpired: " + e.getMessage());
+            try {
+                if (con != null) {
+                    con.rollback();
+                }
+            } catch (SQLException ex) {
+                System.err.println("[DAO ERROR] cleanExpired rollback: " + ex.getMessage());
+            }
+            return 0;
+        } finally {
+            try {
+                if (con != null) {
+                    con.setAutoCommit(true);
+                    con.close();
+                }
+            } catch (SQLException e) {
+                System.err.println("[DAO ERROR] cleanExpired close: " + e.getMessage());
+            }
+        }
     }
 
     public int cleanExpired() { return cleanExpired(10); }

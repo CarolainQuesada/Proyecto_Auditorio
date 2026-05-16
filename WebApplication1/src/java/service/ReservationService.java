@@ -9,6 +9,9 @@ import model.Reservation;
 import model.ReservationEquipment;
 import java.util.List;
 import java.sql.SQLException;  
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 /**
  * Service layer responsible for applying business rules related to reservations.
  *
@@ -85,14 +88,40 @@ public class ReservationService {
     public String createReservationWithEquipment(String user, String date, String startTime, 
                                                   String endTime, int quantity, 
                                                   List<ReservationEquipment> equipments) {
+        CalendarLock.lock();
         try {
+            String validation = validateReservationInput(user, date, startTime, endTime, quantity);
+            if (!"ok".equals(validation)) {
+                log.log(user, "RESERVE_REJECT", "Validacion fallida: " + validation);
+                return validation;
+            }
+
+            String equipmentValidation = validateEquipments(equipments);
+            if (!"ok".equals(equipmentValidation)) {
+                log.log(user, "RESERVE_REJECT", "Equipo invalido");
+                return equipmentValidation;
+            }
+
+            if (reservationDAO.existsOverlap(date, startTime, endTime)) {
+                log.log(user, "RESERVE_REJECT",
+                        "Horario ocupado: " + date + " " + startTime + "-" + endTime);
+                return "busy_time";
+            }
+
             String result = reservationDAO.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
+            if ("created".equals(result)) {
+                log.log(user, "RESERVE_OK", "Reserva creada: " + date + " " + startTime + "-" + endTime);
+            } else {
+                log.log(user, "RESERVE_ERROR", "No se pudo crear reserva: " + result);
+            }
             return result;
             
         } catch (Exception e) {
             System.err.println("[Service] Error general: " + e.getMessage());
             e.printStackTrace();
             return "error";
+        } finally {
+            CalendarLock.unlock();
         }
     }
     
@@ -260,33 +289,38 @@ public class ReservationService {
      * @return {@code "confirmed"}, {@code "expired"} or {@code "error"}
      */
     public String confirmReservation(int id) {
-        Reservation reservation = dao.getById(id);
+        CalendarLock.lock();
+        try {
+            Reservation reservation = dao.getById(id);
 
-        if (reservation == null) {
-            log.log("SYSTEM", "CONFIRM_ERROR", "Reserva no encontrada id=" + id);
-            return "error";
+            if (reservation == null) {
+                log.log("SYSTEM", "CONFIRM_ERROR", "Reserva no encontrada id=" + id);
+                return "error";
+            }
+
+            if ("EXPIRED".equalsIgnoreCase(reservation.getStatus())) {
+                log.log("SYSTEM", "CONFIRM_REJECT", "No se puede confirmar reserva expirada id=" + id);
+                return "expired";
+            }
+
+            if ("CONFIRMED".equalsIgnoreCase(reservation.getStatus())) {
+                log.log("SYSTEM", "CONFIRM_REJECT", "La reserva ya estaba confirmada id=" + id);
+                return "confirmed";
+            }
+
+            boolean ok = dao.confirm(id);
+
+            if (ok) {
+                log.log("SYSTEM", "CONFIRM_OK", "Reserva confirmada id=" + id);
+            } else {
+                log.log("SYSTEM", "CONFIRM_ERROR",
+                        "No se pudo confirmar id=" + id + ". Puede estar expirada por TTL.");
+            }
+
+            return ok ? "confirmed" : "expired";
+        } finally {
+            CalendarLock.unlock();
         }
-
-        if ("EXPIRED".equalsIgnoreCase(reservation.getStatus())) {
-            log.log("SYSTEM", "CONFIRM_REJECT", "No se puede confirmar reserva expirada id=" + id);
-            return "expired";
-        }
-
-        if ("CONFIRMED".equalsIgnoreCase(reservation.getStatus())) {
-            log.log("SYSTEM", "CONFIRM_REJECT", "La reserva ya estaba confirmada id=" + id);
-            return "confirmed";
-        }
-
-        boolean ok = dao.confirm(id);
-
-        if (ok) {
-            log.log("SYSTEM", "CONFIRM_OK", "Reserva confirmada id=" + id);
-        } else {
-            log.log("SYSTEM", "CONFIRM_ERROR",
-                    "No se pudo confirmar id=" + id + ". Puede estar expirada por TTL.");
-        }
-
-        return ok ? "confirmed" : "expired";
     }
 
     /**
@@ -299,15 +333,20 @@ public class ReservationService {
      * @return {@code "deleted"} if successful; otherwise {@code "error"}
      */
     public String deleteReservation(int id) {
-        boolean ok = dao.delete(id);
+        CalendarLock.lock();
+        try {
+            boolean ok = dao.delete(id);
 
-        if (ok) {
-            log.log("SYSTEM", "DELETE_OK", "Reserva eliminada id=" + id);
-        } else {
-            log.log("SYSTEM", "DELETE_ERROR", "Error al eliminar id=" + id);
+            if (ok) {
+                log.log("SYSTEM", "DELETE_OK", "Reserva eliminada id=" + id);
+            } else {
+                log.log("SYSTEM", "DELETE_ERROR", "Error al eliminar id=" + id);
+            }
+
+            return ok ? "deleted" : "error";
+        } finally {
+            CalendarLock.unlock();
         }
-
-        return ok ? "deleted" : "error";
     }
 
     /**
@@ -325,25 +364,30 @@ public class ReservationService {
      *         {@code "error"} on DB failure
      */
     public String cancelReservation(int id, String email) {
-        Reservation r = dao.getById(id);
+        CalendarLock.lock();
+        try {
+            Reservation r = dao.getById(id);
 
-        if (r == null || !r.getUser().equalsIgnoreCase(email)) {
-            return "not_found";
+            if (r == null || !r.getUser().equalsIgnoreCase(email)) {
+                return "not_found";
+            }
+
+            if ("EXPIRED".equalsIgnoreCase(r.getStatus())) {
+                return "not_allowed";
+            }
+
+            boolean ok = dao.delete(id);
+
+            if (ok) {
+                log.log(email, "CANCEL_OK", "Reserva cancelada id=" + id);
+            } else {
+                log.log(email, "CANCEL_ERROR", "Error al cancelar id=" + id);
+            }
+
+            return ok ? "cancelled" : "error";
+        } finally {
+            CalendarLock.unlock();
         }
-
-        if ("EXPIRED".equalsIgnoreCase(r.getStatus())) {
-            return "not_allowed";
-        }
-
-        boolean ok = dao.delete(id);
-
-        if (ok) {
-            log.log(email, "CANCEL_OK", "Reserva cancelada id=" + id);
-        } else {
-            log.log(email, "CANCEL_ERROR", "Error al cancelar id=" + id);
-        }
-
-        return ok ? "cancelled" : "error";
     }
 
     /**
@@ -358,15 +402,11 @@ public class ReservationService {
      * @return formatted string with the user's reservations; empty if none
      */
     public String listReservationsByUser(String email) {
-        List<Reservation> list = dao.getByUser(email);
+        List<Reservation> list = dao.getByUserWithEquipment(email);
         StringBuilder sb = new StringBuilder();
 
         for (Reservation r : list) {
-            Reservation full = dao.getByIdWithEquipment(r.getId());
-            List<ReservationEquipment> equipments = new ArrayList<>();
-            if (full != null) {
-                equipments = full.getEquipments();
-            }
+            List<ReservationEquipment> equipments = r.getEquipments();
 
             String equipStr = "";
             if (!equipments.isEmpty()) {
@@ -408,17 +448,27 @@ public class ReservationService {
      * @return formatted string containing all reservations
      */
     public String listReservations() {
-        List<Reservation> list = dao.getAll();
+        return listReservations(1, 10);
+    }
+
+    public int countActiveReservations() {
+        return dao.countActiveReservations();
+    }
+
+    public int countActiveReservations(String search, String status, String date) {
+        return dao.countActiveReservations(search, status, date);
+    }
+
+    public String listReservations(int page, int pageSize) {
+        return listReservations(page, pageSize, "", "ALL", "");
+    }
+
+    public String listReservations(int page, int pageSize, String search, String status, String date) {
+        List<Reservation> list = dao.getAllWithEquipment(page, pageSize, search, status, date);
         StringBuilder sb = new StringBuilder();
 
         for (Reservation r : list) {
-            Reservation full = dao.getByIdWithEquipment(r.getId());
-
-            List<ReservationEquipment> equipments = new ArrayList<>();
-
-            if (full != null) {
-                equipments = full.getEquipments();
-            }
+            List<ReservationEquipment> equipments = r.getEquipments();
 
             String equipStr = "";
 
@@ -446,6 +496,34 @@ public class ReservationService {
         return sb.toString();
     }
 
+    private String validateReservationInput(String user, String date, String startTime, String endTime, int quantity) {
+        if (user == null || user.trim().isEmpty()
+                || date == null || startTime == null || endTime == null) {
+            return "error";
+        }
+
+        try {
+            LocalDate reservationDate = LocalDate.parse(date);
+            if (reservationDate.isBefore(LocalDate.now())) {
+                return "past";
+            }
+
+            LocalTime start = LocalTime.parse(startTime);
+            LocalTime end = LocalTime.parse(endTime);
+            if (!start.isBefore(end)) {
+                return "hour";
+            }
+        } catch (DateTimeParseException e) {
+            return "error";
+        }
+
+        if (!CapacityControl.isValidCapacity(quantity)) {
+            return "quantity";
+        }
+
+        return "ok";
+    }
+
     /**
      * Validates the list of audiovisual equipment requested for a reservation.
      *
@@ -468,17 +546,8 @@ public class ReservationService {
 
             int maxAllowed = getEquipmentMax(equipmentId);
 
-            if (maxAllowed == 0) {
-                return "Equipo no existe: id=" + equipmentId;
-            }
-
-            if (quantity <= 0) {
-                return "Cantidad inválida para equipo id=" + equipmentId;
-            }
-
-            if (quantity > maxAllowed) {
-                return "Cantidad excedida para equipo id=" + equipmentId
-                        + ". Máximo permitido: " + maxAllowed;
+            if (maxAllowed == 0 || quantity <= 0 || quantity > maxAllowed) {
+                return "busy_equipment";
             }
         }
 

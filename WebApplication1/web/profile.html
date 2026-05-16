@@ -130,8 +130,10 @@
   <script>
     /* ── State ── */
     const EQUIP_NAMES = { '1': 'Proyector', '2': 'Micrófono', '3': 'Sistema de sonido' };
+    const PAGE_SIZE = 20;
     let todasLasReservas = [];
     let filtroActual = 'ALL';
+    let reservasVisibles = PAGE_SIZE;
 
     /* ── Helpers ── */
     function mostrarMensaje(texto, tipo) {
@@ -158,11 +160,13 @@
 
     function formatEquip(equipStr) {
       if (!equipStr) return '<span class="text-gray-400">—</span>';
-      return equipStr.split(',').map(item => {
+      const badges = equipStr.split(',').map(item => {
+        if (!/^\d+:\d+$/.test(item.trim())) return '';
         const [id, qty] = item.split(':');
         const name = EQUIP_NAMES[id] || 'Equipo ' + id;
         return `<span class="inline-block bg-gray-100 rounded px-1 mr-1">${name} ×${qty}</span>`;
       }).join('');
+      return badges || '<span class="text-gray-400">—</span>';
     }
 
     /* ── Load user ── */
@@ -199,6 +203,7 @@
 
         const texto = await res.text();
         todasLasReservas = parsearReservas(texto);
+        reservasVisibles = PAGE_SIZE;
         actualizarStats();
         renderTabla();
 
@@ -212,7 +217,7 @@
       return texto.split('|')
         .filter(r => r.trim())
         .map(r => {
-          // format: id,date,startTime,endTime,quantity,status,equipment
+          // format: id,date,startTime,endTime,quantity,status,timestamp,equipment
           const parts = r.split(',');
           return {
             id:        parts[0] || '',
@@ -221,7 +226,8 @@
             endTime:   parts[3] || '',
             quantity:  parts[4] || '',
             status:    parts[5] || '',
-            equip:     parts.slice(6).join(',') // equipment may contain colons
+            timestamp: parts[6] || '',
+            equip:     parts.slice(7).join(',') // equipment may contain colons
           };
         });
     }
@@ -236,6 +242,7 @@
 
     function filtrar(estado) {
       filtroActual = estado;
+      reservasVisibles = PAGE_SIZE;
 
       // Update tab styles
       document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -260,7 +267,9 @@
         return;
       }
 
-      tbody.innerHTML = lista.map(r => {
+      const visibles = lista.slice(0, reservasVisibles);
+
+      tbody.innerHTML = visibles.map(r => {
         const canCancel = r.status === 'PENDING' || r.status === 'CONFIRMED';
         const accionBtn = canCancel
           ? `<button onclick="cancelar(${r.id})"
@@ -284,6 +293,22 @@
             <td class="px-4 py-3">${accionBtn}</td>
           </tr>`;
       }).join('');
+
+      if (lista.length > reservasVisibles) {
+        tbody.innerHTML += `<tr>
+          <td colspan="7" class="text-center py-4">
+            <button onclick="mostrarMasReservas()"
+              class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full">
+              Mostrar ${Math.min(PAGE_SIZE, lista.length - reservasVisibles)} más
+            </button>
+          </td>
+        </tr>`;
+      }
+    }
+
+    function mostrarMasReservas() {
+      reservasVisibles += PAGE_SIZE;
+      renderTabla();
     }
 
     function formatDate(dateStr) {

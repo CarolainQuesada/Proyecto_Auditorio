@@ -73,7 +73,19 @@ public class ListLogsServlet extends HttpServlet {
 
         try {
             LogDAO dao = new LogDAO();
-            List<Log> logs = dao.getAll();
+            int page = parseInt(req.getParameter("page"), 1);
+            int size = parseInt(req.getParameter("size"), 20);
+            String search = req.getParameter("search");
+
+            page = Math.max(page, 1);
+            size = Math.max(1, Math.min(size, 100));
+
+            int total = dao.countAll(search);
+            resp.setHeader("X-Total-Count", String.valueOf(total));
+            resp.setHeader("X-Page", String.valueOf(page));
+            resp.setHeader("X-Page-Size", String.valueOf(size));
+
+            List<Log> logs = dao.getAll(page, size, search);
             StringBuilder sb = new StringBuilder();
 
             for (Log log : logs) {
@@ -90,6 +102,18 @@ public class ListLogsServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             resp.getWriter().write("ERROR:" + e.getMessage());
+        }
+    }
+
+    private int parseInt(String value, int fallback) {
+        if (value == null || value.trim().isEmpty()) {
+            return fallback;
+        }
+
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
         }
     }
 }

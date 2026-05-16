@@ -21,15 +21,7 @@ import java.util.List;
  *
  * <p>Database table: {@code log}
  * <pre>
- * +-------------+--------------+
- * | Column      | Type         |
- * +-------------+--------------+
- * | id          | INT PK AUTO  |
- * | user        | VARCHAR      |
- * | action      | VARCHAR      |
- * | description | TEXT         |
- * | created_at  | DATETIME     |
- * +-------------+--------------+
+ 
  * </pre>
  *
  * @see concurrency.SystemLog
@@ -77,21 +69,70 @@ public class LogDAO {
      *         empty if the table contains no records or a SQL error occurs
      */
     public List<Log> getAll() {
+        return getAll(1, 20, "");
+    }
+
+    public List<Log> getAll(int page, int pageSize, String search) {
         List<Log> list = new ArrayList<>();
-        String sql = "SELECT * FROM log ORDER BY created_at DESC";
+        int safePage = Math.max(page, 1);
+        int safePageSize = Math.max(1, Math.min(pageSize, 100));
+        int offset = (safePage - 1) * safePageSize;
+        boolean hasSearch = search != null && !search.trim().isEmpty();
+        String sql = "SELECT * FROM log "
+                + (hasSearch ? "WHERE user LIKE ? OR action LIKE ? OR description LIKE ? " : "")
+                + "ORDER BY created_at DESC LIMIT ? OFFSET ?";
 
         try (Connection con = DBConnection.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                list.add(map(rs));
+            int index = 1;
+            if (hasSearch) {
+                String term = "%" + search.trim() + "%";
+                ps.setString(index++, term);
+                ps.setString(index++, term);
+                ps.setString(index++, term);
+            }
+            ps.setInt(index++, safePageSize);
+            ps.setInt(index, offset);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(map(rs));
+                }
             }
 
         } catch (SQLException e) {
             System.err.println("[LogDAO ERROR] getAll: " + e.getMessage());
         }
         return list;
+    }
+
+    public int countAll(String search) {
+        boolean hasSearch = search != null && !search.trim().isEmpty();
+        String sql = "SELECT COUNT(*) FROM log "
+                + (hasSearch ? "WHERE user LIKE ? OR action LIKE ? OR description LIKE ? " : "");
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            if (hasSearch) {
+                String term = "%" + search.trim() + "%";
+                ps.setString(1, term);
+                ps.setString(2, term);
+                ps.setString(3, term);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[LogDAO ERROR] countAll: " + e.getMessage());
+        }
+
+        return 0;
     }
 
     /**
