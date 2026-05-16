@@ -1,4 +1,4 @@
 *.class
 build/
 dist/
-WebApplication1/build/
+WebApplication1/nbproject/private/
