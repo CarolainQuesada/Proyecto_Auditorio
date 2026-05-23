@@ -84,7 +84,7 @@ public class ReservationDAO {
                 con.rollback();
                 return "error";
             }
-            
+
             String sqlRes = "INSERT INTO reservations (user, date, start_time, end_time, quantity, status, created_at) VALUES (?, ?, ?, ?, ?, 'PENDING', NOW())";
             int reservationId;
             try (PreparedStatement ps = con.prepareStatement(sqlRes, Statement.RETURN_GENERATED_KEYS)) {

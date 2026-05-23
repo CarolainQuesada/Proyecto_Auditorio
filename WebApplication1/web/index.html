@@ -55,6 +55,15 @@ h1 { font-family: 'Newsreader', serif; }
   min-height: 18px;
 }
 
+.field-icon {
+  height: 20px;
+  left: 12px;
+  pointer-events: none;
+  position: absolute;
+  top: 14px;
+  width: 20px;
+}
+
 .toggle-password {
   align-items: center;
   color: #6b7280;
@@ -70,6 +79,11 @@ h1 { font-family: 'Newsreader', serif; }
 
 .toggle-password:hover {
   color: #CC0000;
+}
+
+.toggle-password svg {
+  height: 20px;
+  width: 20px;
 }
 </style>
 
@@ -118,9 +132,10 @@ Correo institucional
 </label>
 
 <div class="relative mt-2">
-<span class="material-symbols-outlined absolute left-3 top-3 text-gray-400">
-person
-</span>
+<svg class="field-icon text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M20 21a8 8 0 0 0-16 0"/>
+<circle cx="12" cy="7" r="4"/>
+</svg>
 
 <input 
 id="email"
@@ -141,9 +156,10 @@ Contraseña
 </label>
 
 <div class="relative mt-2">
-<span class="material-symbols-outlined absolute left-3 top-3 text-gray-400">
-lock
-</span>
+<svg class="field-icon text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<rect x="3" y="11" width="18" height="11" rx="2"/>
+<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+</svg>
 
 <input 
 id="password"
@@ -155,7 +171,16 @@ required
 autocomplete="current-password"
 />
 <button type="button" class="toggle-password" data-target="password" aria-label="Mostrar contrasena">
-<span class="material-symbols-outlined text-[20px]">visibility</span>
+<svg class="eye-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+<circle cx="12" cy="12" r="3"/>
+</svg>
+<svg class="eye-off-icon hidden" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M10.7 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-2.1 3.1"/>
+<path d="M6.6 6.6C3.6 8.6 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/>
+<path d="M14.1 14.1A3 3 0 0 1 9.9 9.9"/>
+<path d="M3 3l18 18"/>
+</svg>
 </button>
 </div>
 <p id="passwordHelp" class="field-help mt-1 text-xs text-gray-500">Ingrese su contrasena</p>
@@ -283,10 +308,12 @@ passwordInput.addEventListener("input", () => validatePassword(false));
 document.querySelectorAll(".toggle-password").forEach((button) => {
   button.addEventListener("click", () => {
     const input = document.getElementById(button.dataset.target);
-    const icon = button.querySelector(".material-symbols-outlined");
+    const eyeIcon = button.querySelector(".eye-icon");
+    const eyeOffIcon = button.querySelector(".eye-off-icon");
     const isHidden = input.type === "password";
     input.type = isHidden ? "text" : "password";
-    icon.innerText = isHidden ? "visibility_off" : "visibility";
+    eyeIcon.classList.toggle("hidden", isHidden);
+    eyeOffIcon.classList.toggle("hidden", !isHidden);
   });
 });
 
