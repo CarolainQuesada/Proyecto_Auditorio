@@ -200,7 +200,7 @@
           <div class="step-num active" id="sn1">1</div>
           <div class="step-text">
             <div class="step-title active" id="st1">Seleccionar fecha</div>
-            <div class="step-sub" id="ss1">Elige el día del evento</div>
+            <div class="step-sub" id="ss1">Elija el día del evento</div>
           </div>
         </div>
         <div class="step-connector" id="sc1"></div>
@@ -254,7 +254,7 @@
 
   <!-- ══ MAIN ══ -->
   <main class="main">
-    <div style="max-width:640px;">
+    <div style="max-width:640px;width:100%;margin:0 auto;">
 
       <!-- Header -->
       <div style="margin-bottom:28px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
@@ -281,9 +281,9 @@
 
       <!-- ── PANEL 0: Landing — Realizar reserva ── -->
       <div class="panel active card" id="panel0" style="text-align:center;padding:48px 32px;">
-        <p class="font-headline" style="font-size:24px;color:#1a0a0a;margin:0 0 8px;">¿Querés reservar el auditorio?</p>
+        <p class="font-headline" style="font-size:24px;color:#1a0a0a;margin:0 0 8px;">¿Desea reservar el auditorio?</p>
         <p style="font-size:14px;color:#aaa;margin:0 0 32px;max-width:360px;margin-left:auto;margin-right:auto;">
-          Tenés <strong>10 minutos</strong> para completar todos los pasos una vez que iniciés el proceso.
+          Tiene <strong>10 minutos</strong> para completar todos los pasos una vez que inicie el proceso.
         </p>
 
         <div style="display:inline-flex;align-items:center;gap:12px;background:#f8f7f5;border:1px solid #ede9e8;border-radius:14px;padding:16px 24px;margin-bottom:32px;">
@@ -303,7 +303,7 @@
       <!-- ── PANEL 1: Fecha ── -->
       <div class="panel card" id="panel1">
         <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">¿Cuándo es el evento?</p>
-        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Seleccioná una fecha futura disponible.</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Seleccione una fecha futura disponible.</p>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <button class="btn-out" style="padding:7px 14px;font-size:13px;" onclick="cambiarMes(-1)">← Ant.</button>
@@ -351,7 +351,7 @@
       <!-- ── PANEL 3: Detalles ── -->
       <div class="panel card" id="panel3">
         <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">Asistentes y equipamiento</p>
-        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">¿Cuántas personas y qué necesitás?</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">¿Cuántas personas asistirán y qué necesita?</p>
 
         <!-- Asistentes -->
         <div style="margin-bottom:24px;">
@@ -427,8 +427,8 @@
 
       <!-- ── PANEL 4: Confirmar ── -->
       <div class="panel card" id="panel4">
-        <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">Revisá tu reservación</p>
-        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Verificá los datos antes de confirmar.</p>
+        <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">Revise su reservación</p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;">Verifique los datos antes de confirmar.</p>
 
         <div style="background:#faf9f7;border-radius:12px;padding:20px;margin-bottom:20px;">
           <div class="sum-row"><span class="sum-lbl">📅 Fecha</span><span class="sum-val" id="sumF">—</span></div>
@@ -463,7 +463,7 @@
 <div class="modal-backdrop" id="confirmModal">
   <div class="modal">
     <p class="font-headline" style="font-size:22px;color:#1a0a0a;margin:0 0 6px;">Confirmar reserva</p>
-    <p style="font-size:13px;color:#777;margin:0 0 18px;">Revisa estos datos antes de enviar la solicitud.</p>
+    <p style="font-size:13px;color:#777;margin:0 0 18px;">Revise estos datos antes de enviar la solicitud.</p>
     <div style="background:#faf9f7;border-radius:12px;padding:16px;margin-bottom:18px;">
       <div class="sum-row"><span class="sum-lbl">Fecha</span><span class="sum-val" id="modalF">-</span></div>
       <div class="sum-row"><span class="sum-lbl">Horario</span><span class="sum-val" id="modalH">-</span></div>
@@ -524,7 +524,7 @@
     hour:['Hora de inicio debe ser menor que hora de fin.','err'],
     quantity:['Cantidad debe estar entre 1 y 200.','err'],
     past:['No se permiten fechas pasadas.','err'],
-    unknown_action:['No se pudo procesar la reserva. Intenta de nuevo.','err'],
+    unknown_action:['No se pudo procesar la reserva. Intente de nuevo.','err'],
     error:['Error interno del servidor.','err'],
     server:['Servidor no disponible.','err'],
   };
@@ -677,7 +677,7 @@
         document.querySelectorAll('.btn-red').forEach(b => {
           b.disabled = true;
         });
-        notif('⏰ El tiempo expiró. Tu sesión de reserva finalizó.', 'err');
+        notif('⏰ El tiempo expiró. Su sesión de reserva finalizó.', 'err');
         return;
       }
 
@@ -699,11 +699,11 @@
 
   /* ── Step control ── */
   function goStep(n){
-    if(n===2&&!selDate){ notif('Selecciona una fecha primero.','inf'); return; }
+    if(n===2&&!selDate){ notif('Seleccione una fecha primero.','inf'); return; }
     if(n===3){
       const s=document.getElementById('start_time').value;
       const e=document.getElementById('end_time').value;
-      if(!s||!e){ notif('Selecciona una hora disponible.','inf'); return; }
+      if(!s||!e){ notif('Seleccione una hora disponible.','inf'); return; }
       if(s>=e){ notif('La hora de inicio debe ser menor que la hora de fin.','err'); return; }
     }
     if(n===4){
