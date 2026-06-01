@@ -1,6 +1,6 @@
 package concurrency;
 
-import dao.ReservationDAO;
+import service.ReservationService;
 import socket.ServerGUI;
 
 /**
@@ -9,7 +9,7 @@ import socket.ServerGUI;
  *
  * <p>Once started, this thread runs an infinite loop that:
  * <ol>
- *   <li>Calls {@link ReservationDAO#cleanExpired(int)} to mark all
+ *   <li>Calls {@link ReservationService#cleanExpiredReservations(int)} to mark all
  *       {@code PENDING} reservations older than {@value #TTL_MINUTES} minutes
  *       as {@code EXPIRED} in the database.</li>
  *   <li>Logs the number of expired reservations to both the server GUI and
@@ -29,7 +29,7 @@ import socket.ServerGUI;
  * monitor.start();
  * }</pre>
  *
- * @see ReservationDAO#cleanExpired(int)
+ * @see ReservationService#cleanExpiredReservations(int)
  * @see SystemLog
  */
 public class TTLMonitor extends Thread {
@@ -61,7 +61,7 @@ public class TTLMonitor extends Thread {
      * <p>Runs indefinitely until the thread is interrupted (e.g., when the
      * server is stopped). On each iteration:
      * <ul>
-     *   <li>Invokes {@link ReservationDAO#cleanExpired(int)} with the
+     *   <li>Invokes {@link ReservationService#cleanExpiredReservations(int)} with the
      *       configured TTL.</li>
      *   <li>Logs the count of expired reservations if any were found.</li>
      *   <li>Sleeps for 60 000 ms (1 minute) before the next cycle.</li>
@@ -76,13 +76,7 @@ public class TTLMonitor extends Thread {
             try {
                 gui.log("TTL running... expiration threshold: " + TTL_MINUTES + " minutes");
 
-                CalendarLock.lock();
-                int expired;
-                try {
-                    expired = new ReservationDAO().cleanExpired(TTL_MINUTES);
-                } finally {
-                    CalendarLock.unlock();
-                }
+                int expired = new ReservationService().cleanExpiredReservations(TTL_MINUTES);
 
                 if (expired > 0) {
                     gui.log("TTL expired reservations: " + expired);

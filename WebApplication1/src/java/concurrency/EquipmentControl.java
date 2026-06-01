@@ -39,6 +39,7 @@ public class EquipmentControl {
      * Keys: {@code "PROYECTOR"}, {@code "SONIDO"}, {@code "MICROFONO"}.
      */
     private final Map<String, Semaphore> equipmentSemaphores;
+    private final Map<String, Integer> equipmentMaximums;
 
     /**
      * Mutex that serializes all multi-equipment acquire/release operations,
@@ -60,12 +61,17 @@ public class EquipmentControl {
      */
     public EquipmentControl() {
         this.equipmentSemaphores = new HashMap<>();
+        this.equipmentMaximums = new HashMap<>();
         this.multiLock = new ReentrantLock();
 
         // Initialize each semaphore with its available unit count (fair mode).
-        equipmentSemaphores.put("PROYECTOR", new Semaphore(2, true));
-        equipmentSemaphores.put("MICROFONO", new Semaphore(5, true));
-        equipmentSemaphores.put("SONIDO",    new Semaphore(3, true));
+        equipmentMaximums.put("PROYECTOR", 2);
+        equipmentMaximums.put("MICROFONO", 5);
+        equipmentMaximums.put("SONIDO",    3);
+
+        for (Map.Entry<String, Integer> entry : equipmentMaximums.entrySet()) {
+            equipmentSemaphores.put(entry.getKey(), new Semaphore(entry.getValue(), true));
+        }
     }
 
     /**
@@ -97,9 +103,14 @@ public class EquipmentControl {
      * @param quantity the number of units to release
      */
     public void release(String type, int quantity) {
-        Semaphore sem = equipmentSemaphores.get(type.toUpperCase());
-        if (sem != null) {
-            sem.release(quantity);
+        String key = type.toUpperCase();
+        Semaphore sem = equipmentSemaphores.get(key);
+        Integer max = equipmentMaximums.get(key);
+        if (sem != null && max != null && quantity > 0) {
+            int releasable = Math.min(quantity, max - sem.availablePermits());
+            if (releasable > 0) {
+                sem.release(releasable);
+            }
         }
     }
 

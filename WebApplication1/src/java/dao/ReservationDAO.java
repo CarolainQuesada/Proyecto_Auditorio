@@ -442,6 +442,51 @@ public class ReservationDAO {
         return false;
     }
 
+    public List<Reservation> getPendingExpiredWithEquipment(int ttlMinutes) {
+        List<Reservation> list = new ArrayList<>();
+        String sql = "SELECT r.*, re.id AS re_id, re.equipment_id, re.quantity AS equipment_quantity "
+                + "FROM reservations r "
+                + "LEFT JOIN reservation_equipment re ON r.id = re.reservation_id "
+                + "WHERE r.status = 'PENDING' "
+                + "AND TIMESTAMPDIFF(MINUTE, r.created_at, NOW()) >= ? "
+                + "ORDER BY r.id";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, ttlMinutes);
+            try (ResultSet rs = ps.executeQuery()) {
+                LinkedHashMap<Integer, Reservation> grouped = new LinkedHashMap<>();
+
+                while (rs.next()) {
+                    int reservationId = rs.getInt("id");
+                    Reservation reservation = grouped.get(reservationId);
+
+                    if (reservation == null) {
+                        reservation = mapReservation(rs);
+                        grouped.put(reservationId, reservation);
+                    }
+
+                    int equipmentRowId = rs.getInt("re_id");
+                    if (!rs.wasNull()) {
+                        ReservationEquipment equipment = new ReservationEquipment();
+                        equipment.setId(equipmentRowId);
+                        equipment.setReservationId(reservationId);
+                        equipment.setEquipmentId(rs.getInt("equipment_id"));
+                        equipment.setQuantity(rs.getInt("equipment_quantity"));
+                        reservation.getEquipments().add(equipment);
+                    }
+                }
+
+                list.addAll(grouped.values());
+            }
+        } catch (SQLException e) {
+            System.err.println("[DAO ERROR] getPendingExpiredWithEquipment: " + e.getMessage());
+        }
+
+        return list;
+    }
+
     public int cleanExpired(int ttlMinutes) {
         String selectSql = "SELECT id FROM reservations "
                 + "WHERE status = 'PENDING' "

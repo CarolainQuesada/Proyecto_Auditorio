@@ -570,6 +570,13 @@
   let calM = new Date().getMonth();
   let calY = new Date().getFullYear();
   let reservationStarted = false;
+  function dateKey(year, month, day){
+    return year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  }
+  function todayKey(){
+    const today = new Date();
+    return dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  }
   const TIME_SLOTS = {
     morning: [
       ['07:00','08:00'],
@@ -874,7 +881,7 @@
     cal.innerHTML='';
     const first=new Date(calY,calM,1).getDay();
     const total=new Date(calY,calM+1,0).getDate();
-    const hoy=new Date(); hoy.setHours(0,0,0,0);
+    const hoy=todayKey();
     const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     document.getElementById('mesActual').textContent=
       months[calM].charAt(0).toUpperCase()+months[calM].slice(1)+' '+calY;
@@ -883,9 +890,8 @@
       const d=document.createElement('div'); d.className='cal-day'; cal.appendChild(d);
     }
     for(let d=1;d<=total;d++){
-      const fd=new Date(calY,calM,d); fd.setHours(0,0,0,0);
-      const past=fd<hoy;
-      const ds=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const ds=dateKey(calY,calM,d);
+      const past=ds<hoy;
       const el=document.createElement('div');
       el.textContent=d;
       el.className='cal-day'+(past?' past':'')+(ds===selDate?' selected':'');

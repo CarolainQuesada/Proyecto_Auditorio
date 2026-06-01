@@ -82,7 +82,11 @@ public class CapacityControl {
      */
     public static void release(int permits) {
         if (permits > 0 && permits <= MAX_CAPACITY) {
-            semaphore.release(permits);
+            int available = semaphore.availablePermits();
+            int releasable = Math.min(permits, MAX_CAPACITY - available);
+            if (releasable > 0) {
+                semaphore.release(releasable);
+            }
         }
     }
 

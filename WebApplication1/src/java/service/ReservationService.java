@@ -2,9 +2,13 @@ package service;
 
 import concurrency.CalendarLock;
 import concurrency.CapacityControl;
+import concurrency.EquipmentControl;
 import concurrency.SystemLog;
 import dao.ReservationDAO;
+import dao.ReservationEquipmentDAO;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import model.Reservation;
 import model.ReservationEquipment;
 import java.util.List;
@@ -45,6 +49,8 @@ public class ReservationService {
      * DAO used to persist, retrieve, update and delete reservations.
      */
     private final ReservationDAO dao = new ReservationDAO();
+    private static final EquipmentControl equipmentControl = new EquipmentControl();
+    private final ReservationEquipmentDAO reservationEquipmentDAO = new ReservationEquipmentDAO();
 
     /**
      * Singleton audit log used to register reservation-related events.
@@ -108,13 +114,36 @@ public class ReservationService {
                 return "busy_time";
             }
 
-            String result = reservationDAO.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
-            if ("created".equals(result)) {
-                log.log(user, "RESERVE_OK", "Reserva creada: " + date + " " + startTime + "-" + endTime);
-            } else {
-                log.log(user, "RESERVE_ERROR", "No se pudo crear reserva: " + result);
+            Map<String, Integer> equipmentRequirements = buildEquipmentRequirements(equipments);
+            if (!CapacityControl.acquire(quantity)) {
+                log.log(user, "RESERVE_REJECT", "Capacidad sin permisos disponibles: " + quantity);
+                return "busy_capacity";
             }
-            return result;
+
+            boolean equipmentAcquired = false;
+            boolean resourcesOwnedByReservation = false;
+            try {
+                equipmentAcquired = equipmentControl.acquireMultiple(equipmentRequirements);
+                if (!equipmentAcquired) {
+                    log.log(user, "RESERVE_REJECT", "Equipo sin permisos disponibles");
+                    return "busy_equipment";
+                }
+
+                String result = reservationDAO.createWithEquipment(user, date, startTime, endTime, quantity, equipments);
+                if ("created".equals(result)) {
+                    resourcesOwnedByReservation = true;
+                    log.log(user, "RESERVE_OK", "Reserva creada: " + date + " " + startTime + "-" + endTime);
+                } else {
+                    log.log(user, "RESERVE_ERROR", "No se pudo crear reserva: " + result);
+                }
+                return result;
+            } finally {
+                if (!equipmentAcquired) {
+                    CapacityControl.release(quantity);
+                } else if (!resourcesOwnedByReservation) {
+                    releaseReservationResources(quantity, equipmentRequirements);
+                }
+            }
             
         } catch (Exception e) {
             System.err.println("[Service] Error general: " + e.getMessage());
@@ -167,7 +196,20 @@ public class ReservationService {
                 return "busy_time";
             }
 
-            boolean ok = dao.create(user, date, startTime, endTime, quantity);
+            boolean capacityAcquired = CapacityControl.acquire(quantity);
+            if (!capacityAcquired) {
+                log.log(user, "RESERVE_REJECT", "Capacidad sin permisos disponibles: " + quantity);
+                return "busy_capacity";
+            }
+
+            boolean ok = false;
+            try {
+                ok = dao.create(user, date, startTime, endTime, quantity);
+            } finally {
+                if (!ok) {
+                    CapacityControl.release(quantity);
+                }
+            }
 
             if (ok) {
                 log.log(user, "RESERVE_OK",
@@ -242,6 +284,32 @@ public class ReservationService {
                 return "error";
             }
 
+            List<ReservationEquipment> reservationEquipments = reservationEquipmentDAO.getByReservationId(id);
+            int oldQuantity = reservation.getQuantity();
+            boolean currentActive = !"EXPIRED".equalsIgnoreCase(reservation.getStatus());
+            boolean targetActive = !"EXPIRED".equalsIgnoreCase(status);
+            int capacityToAcquire = 0;
+            int capacityToRelease = 0;
+            boolean releaseAllResources = false;
+
+            if (currentActive && targetActive) {
+                int delta = quantity - oldQuantity;
+                if (delta > 0) {
+                    capacityToAcquire = delta;
+                } else if (delta < 0) {
+                    capacityToRelease = -delta;
+                }
+            } else if (!currentActive && targetActive) {
+                capacityToAcquire = quantity;
+            } else if (currentActive) {
+                releaseAllResources = true;
+            }
+
+            if (capacityToAcquire > 0 && !CapacityControl.acquire(capacityToAcquire)) {
+                log.log("SYSTEM", "EDIT_REJECT", "Capacidad sin permisos disponibles en edición id=" + id);
+                return "busy_capacity";
+            }
+
             reservation.setDate(date);
             reservation.setStartTime(startTime);
             reservation.setEndTime(endTime);
@@ -251,6 +319,11 @@ public class ReservationService {
             boolean ok = dao.update(reservation);
 
             if (ok) {
+                if (releaseAllResources) {
+                    releaseReservationResources(oldQuantity, buildEquipmentRequirements(reservationEquipments));
+                } else if (capacityToRelease > 0) {
+                    CapacityControl.release(capacityToRelease);
+                }
                 log.log(reservation.getUser(), "EDIT_OK",
                         "id=" + id
                         + ";fecha=" + date
@@ -258,6 +331,9 @@ public class ReservationService {
                         + ";fin=" + endTime
                         + ";asistentes=" + quantity);
             } else {
+                if (capacityToAcquire > 0) {
+                    CapacityControl.release(capacityToAcquire);
+                }
                 log.log("SYSTEM", "EDIT_ERROR", "Error al editar id=" + id);
             }
 
@@ -335,9 +411,12 @@ public class ReservationService {
     public String deleteReservation(int id) {
         CalendarLock.lock();
         try {
+            Reservation reservation = dao.getById(id);
+            List<ReservationEquipment> equipments = reservationEquipmentDAO.getByReservationId(id);
             boolean ok = dao.delete(id);
 
             if (ok) {
+                releaseReservationResources(reservation, equipments);
                 log.log("SYSTEM", "DELETE_OK", "Reserva eliminada id=" + id);
             } else {
                 log.log("SYSTEM", "DELETE_ERROR", "Error al eliminar id=" + id);
@@ -376,15 +455,35 @@ public class ReservationService {
                 return "not_allowed";
             }
 
+            List<ReservationEquipment> equipments = reservationEquipmentDAO.getByReservationId(id);
             boolean ok = dao.delete(id);
 
             if (ok) {
+                releaseReservationResources(r, equipments);
                 log.log(email, "CANCEL_OK", "Reserva cancelada id=" + id);
             } else {
                 log.log(email, "CANCEL_ERROR", "Error al cancelar id=" + id);
             }
 
             return ok ? "cancelled" : "error";
+        } finally {
+            CalendarLock.unlock();
+        }
+    }
+
+    public int cleanExpiredReservations(int ttlMinutes) {
+        CalendarLock.lock();
+        try {
+            List<Reservation> expiringReservations = dao.getPendingExpiredWithEquipment(ttlMinutes);
+            int expired = dao.cleanExpired(ttlMinutes);
+
+            if (expired > 0) {
+                for (Reservation reservation : expiringReservations) {
+                    releaseReservationResources(reservation, reservation.getEquipments());
+                }
+            }
+
+            return expired;
         } finally {
             CalendarLock.unlock();
         }
@@ -552,6 +651,51 @@ public class ReservationService {
         }
 
         return "ok";
+    }
+
+    private Map<String, Integer> buildEquipmentRequirements(List<ReservationEquipment> equipments) {
+        Map<String, Integer> requirements = new HashMap<>();
+        if (equipments == null) {
+            return requirements;
+        }
+
+        for (ReservationEquipment equipment : equipments) {
+            String type = equipmentType(equipment.getEquipmentId());
+            if (type != null) {
+                int quantity = equipment.getQuantity();
+                requirements.put(type, requirements.getOrDefault(type, 0) + quantity);
+            }
+        }
+
+        return requirements;
+    }
+
+    private void releaseReservationResources(Reservation reservation, List<ReservationEquipment> equipments) {
+        if (reservation == null || "EXPIRED".equalsIgnoreCase(reservation.getStatus())) {
+            return;
+        }
+
+        releaseReservationResources(reservation.getQuantity(), buildEquipmentRequirements(equipments));
+    }
+
+    private void releaseReservationResources(int quantity, Map<String, Integer> equipmentRequirements) {
+        CapacityControl.release(quantity);
+        if (equipmentRequirements != null && !equipmentRequirements.isEmpty()) {
+            equipmentControl.releaseMultiple(equipmentRequirements);
+        }
+    }
+
+    private String equipmentType(int equipmentId) {
+        switch (equipmentId) {
+            case 1:
+                return "PROYECTOR";
+            case 2:
+                return "MICROFONO";
+            case 3:
+                return "SONIDO";
+            default:
+                return null;
+        }
     }
 
     /**
