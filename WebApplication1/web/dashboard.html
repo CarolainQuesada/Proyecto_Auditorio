@@ -146,16 +146,99 @@
       padding:12px; font-weight:700; cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
     }
     .period-tab.active { border-color:#9e0000; background:#fff2f2; color:#9e0000; }
-    .slot-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-    .slot-card {
-      border:1.5px solid #e5e0de; background:#fff; border-radius:12px; padding:14px;
-      text-align:left; cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+    .period-tab.active#periodNight { background:#9e0000 !important; color:#fff !important; border-color:#9e0000 !important; }
+
+    /* ── Time Selector ── */
+    .time-selector-container {
+      background: #faf9f7;
+      border: 1.5px solid #e5e0de;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
     }
-    .slot-card:hover:not(:disabled) { border-color:#9e0000; background:#fff8f8; }
-    .slot-card.active { border-color:#9e0000; background:#9e0000; color:#fff; }
-    .slot-card:disabled { background:#f3f4f6; color:#9ca3af; cursor:not-allowed; border-color:#e5e7eb; }
-    .slot-time { font-size:15px; font-weight:700; display:block; }
-    .slot-state { font-size:11px; margin-top:3px; display:block; }
+    .time-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .time-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    .time-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    .time-select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e5e0de;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+      transition: border 0.18s;
+    }
+    .time-select:focus {
+      border-color: #9e0000;
+    }
+    .btn-all-day {
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #e5e0de;
+      background: #fff;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-all-day:hover {
+      border-color: #9e0000;
+      color: #9e0000;
+    }
+    .btn-all-day.active {
+      background: #9e0000;
+      color: #fff;
+      border-color: #9e0000;
+    }
+    .time-range-display {
+      background: #fff2f2;
+      border: 1.5px solid #9e0000;
+      border-radius: 10px;
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .time-range-display .range-time {
+      font-size: 20px;
+      font-weight: 700;
+      color: #9e0000;
+      margin: 0;
+    }
+    .time-range-display .range-duration {
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .time-error {
+      background: #fef2f2;
+      border: 1.5px solid #dc2626;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-top: 16px;
+      display: none;
+    }
+    .time-error.show {
+      display: block;
+    }
 
     /* ── Summary ── */
     .sum-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ede9e8; font-size: 14px; }
@@ -361,7 +444,7 @@
       <!-- ── PANEL 2: Horario ── -->
       <div class="panel card" id="panel2">
         <p class="font-headline" style="font-size:20px;color:#1a0a0a;margin:0 0 4px;">¿A qué hora?</p>
-        <p style="font-size:13px;color:#aaa;margin:0 0 16px;" id="p2fecha"></p>
+        <p style="font-size:13px;color:#aaa;margin:0 0 20px;" id="p2fecha"></p>
 
         <input type="hidden" id="start_time">
         <input type="hidden" id="end_time">
@@ -369,11 +452,41 @@
         <div class="period-tabs">
           <button class="period-tab active" id="periodMorning" onclick="selectPeriod('morning')">Mañana</button>
           <button class="period-tab" id="periodAfternoon" onclick="selectPeriod('afternoon')">Tarde</button>
+          <button class="period-tab" id="periodNight" onclick="selectPeriod('night')">Noche</button>
         </div>
 
-        <div id="slotGrid" class="slot-grid"></div>
+        <div class="time-selector-container">
+          <div class="time-row">
+            <div class="time-group">
+              <label class="time-label">Hora de inicio</label>
+              <select class="time-select" id="startTimeSelect" onchange="updateEndTimeOptions()">
+                <option value="">Seleccione hora</option>
+              </select>
+            </div>
 
-        <p id="durLabel" style="font-size:13px;text-align:center;min-height:18px;margin-bottom:14px;"></p>
+            <div class="time-group">
+              <label class="time-label">Hora de fin</label>
+              <select class="time-select" id="endTimeSelect" onchange="validateTimeRange()">
+                <option value="">Seleccione hora</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;">
+            <button class="btn-all-day" id="btnAllDay" onclick="selectAllDay()">
+              📅 Todo el turno completo
+            </button>
+          </div>
+
+          <div class="time-range-display" id="timeRangeDisplay" style="display:none;margin-top:16px;">
+            <p class="range-time" id="rangeTimeText">07:00 - 11:00</p>
+            <p class="range-duration" id="rangeDurationText">Duración: 4 horas</p>
+          </div>
+
+          <div class="time-error" id="timeError">
+            ⚠️ La hora de fin debe ser posterior a la hora de inicio.
+          </div>
+        </div>
 
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
           <button class="btn-out" onclick="goStep(1)">← Atrás</button>
@@ -578,21 +691,21 @@
     return dateKey(today.getFullYear(), today.getMonth(), today.getDate());
   }
   const TIME_SLOTS = {
-    morning: [
-      ['07:00','08:00'],
-      ['08:00','09:00'],
-      ['09:00','10:00'],
-      ['10:00','11:00'],
-      ['11:00','12:00']
-    ],
-    afternoon: [
-      ['13:00','14:00'],
-      ['14:00','15:00'],
-      ['15:00','16:00'],
-      ['16:00','17:00'],
-      ['18:00','19:00'],
-      ['19:00','20:00']
-    ]
+    morning: {
+      start: 7,
+      end: 13,
+      label: 'Mañana'
+    },
+    afternoon: {
+      start: 13,
+      end: 19,
+      label: 'Tarde'
+    },
+    night: {
+      start: 19,
+      end: 22,
+      label: 'Noche'
+    }
   };
 
   /* ── Session ── */
@@ -660,14 +773,14 @@
   function clearSelectedTime(){
     document.getElementById('start_time').value='';
     document.getElementById('end_time').value='';
-    document.getElementById('durLabel').textContent='';
+    document.getElementById('timeRangeDisplay').style.display = 'none';
+    document.getElementById('timeError').classList.remove('show');
     document.getElementById('btn2').disabled=true;
     updateMiniSummary();
   }
   async function loadReservedSlots(){
     reservedSlots=[];
     clearSelectedTime();
-    renderSlots();
     if(!selDate) return;
     try {
       const res=await fetch('reservedSlots?date='+encodeURIComponent(selDate));
@@ -679,40 +792,134 @@
           const parts=item.split(',');
           return { start: parts[0], end: parts[1], status: parts[2] || '' };
         });
-      renderSlots();
     } catch(e) {
       notif('No se pudieron consultar las horas reservadas.','err');
     }
   }
+
+  /* ── Time Selector Functions ── */
   function selectPeriod(period){
-    selectedPeriod=period;
+    selectedPeriod = period;
+
     document.getElementById('periodMorning').classList.toggle('active', period==='morning');
     document.getElementById('periodAfternoon').classList.toggle('active', period==='afternoon');
+    document.getElementById('periodNight').classList.toggle('active', period==='night');
+
+    // Resetear selects
+    const startSelect = document.getElementById('startTimeSelect');
+    const endSelect = document.getElementById('endTimeSelect');
+    startSelect.innerHTML = '<option value="">Seleccione hora</option>';
+    endSelect.innerHTML = '<option value="">Seleccione hora</option>';
+    startSelect.value = '';
+    endSelect.value = '';
+
+    document.getElementById('timeRangeDisplay').style.display = 'none';
+    document.getElementById('btnAllDay').classList.remove('active');
+    document.getElementById('timeError').classList.remove('show');
+
+    // Llenar hora de inicio
+    const periodData = TIME_SLOTS[period];
+    for (let hour = periodData.start; hour < periodData.end; hour++) {
+      const option = document.createElement('option');
+      const timeStr = String(hour).padStart(2, '0') + ':00';
+      option.value = timeStr;
+      option.textContent = timeStr;
+      startSelect.appendChild(option);
+    }
+
     clearSelectedTime();
-    renderSlots();
   }
-  function renderSlots(){
-    const grid=document.getElementById('slotGrid');
-    if(!grid) return;
-    const slots=TIME_SLOTS[selectedPeriod];
-    grid.innerHTML=slots.map(([start,end]) => {
-      const occupied=overlapsReserved(start,end);
-      const active=document.getElementById('start_time').value===start && document.getElementById('end_time').value===end;
-      return `<button type="button"
-        class="slot-card${active?' active':''}"
-        ${occupied?'disabled':''}
-        onclick="selectSlot('${start}','${end}')">
-        <span class="slot-time">${start} - ${end}</span>
-        <span class="slot-state">${occupied?'Hora ocupada':'Disponible'}</span>
-      </button>`;
-    }).join('');
+
+  function updateEndTimeOptions() {
+    const startTimeSelect = document.getElementById('startTimeSelect');
+    const endTimeSelect = document.getElementById('endTimeSelect');
+    const startTime = startTimeSelect.value;
+    const period = TIME_SLOTS[selectedPeriod];
+
+    // Resetear hora de fin
+    endTimeSelect.innerHTML = '<option value="">Seleccione hora</option>';
+    document.getElementById('timeRangeDisplay').style.display = 'none';
+    document.getElementById('btn2').disabled = true;
+    document.getElementById('btnAllDay').classList.remove('active');
+    document.getElementById('timeError').classList.remove('show');
+
+    if (!startTime) return;
+
+    const startHour = parseInt(startTime.split(':')[0]);
+
+    // Llenar horas de fin (posteriores al inicio)
+    for (let hour = startHour + 1; hour <= period.end; hour++) {
+      const option = document.createElement('option');
+      const timeStr = String(hour).padStart(2, '0') + ':00';
+      option.value = timeStr;
+      option.textContent = timeStr;
+      endTimeSelect.appendChild(option);
+    }
   }
-  function selectSlot(start,end){
-    document.getElementById('start_time').value=start;
-    document.getElementById('end_time').value=end;
-    validateStep2();
-    renderSlots();
+
+  function validateTimeRange() {
+    const startTime = document.getElementById('startTimeSelect').value;
+    const endTime = document.getElementById('endTimeSelect').value;
+    const errorDiv = document.getElementById('timeError');
+    const rangeDisplay = document.getElementById('timeRangeDisplay');
+
+    if (!startTime || !endTime) {
+      rangeDisplay.style.display = 'none';
+      document.getElementById('btn2').disabled = true;
+      return;
+    }
+
+    const startHour = parseInt(startTime.split(':')[0]);
+    const endHour = parseInt(endTime.split(':')[0]);
+
+    if (endHour <= startHour) {
+      errorDiv.classList.add('show');
+      rangeDisplay.style.display = 'none';
+      document.getElementById('btn2').disabled = true;
+      return;
+    }
+
+    errorDiv.classList.remove('show');
+    rangeDisplay.style.display = 'block';
+
+    const duration = endHour - startHour;
+    const durationText = duration === 1 ? '1 hora' : duration + ' horas';
+
+    document.getElementById('rangeTimeText').textContent = startTime + ' - ' + endTime;
+    document.getElementById('rangeDurationText').textContent = 'Duración: ' + durationText;
+
+    document.getElementById('start_time').value = startTime;
+    document.getElementById('end_time').value = endTime;
+    document.getElementById('btn2').disabled = false;
+    document.getElementById('btnAllDay').classList.remove('active');
+
+    updateMiniSummary();
   }
+
+  function selectAllDay() {
+    const period = TIME_SLOTS[selectedPeriod];
+    const startTime = String(period.start).padStart(2, '0') + ':00';
+    const endTime = String(period.end).padStart(2, '0') + ':00';
+    const duration = period.end - period.start;
+    const durationText = duration === 1 ? '1 hora' : duration + ' horas';
+
+    document.getElementById('startTimeSelect').value = startTime;
+    document.getElementById('endTimeSelect').value = endTime;
+
+    document.getElementById('timeRangeDisplay').style.display = 'block';
+    document.getElementById('rangeTimeText').textContent = startTime + ' - ' + endTime;
+    document.getElementById('rangeDurationText').textContent = 'Todo el turno (' + durationText + ')';
+
+    document.getElementById('start_time').value = startTime;
+    document.getElementById('end_time').value = endTime;
+
+    document.getElementById('btnAllDay').classList.add('active');
+    document.getElementById('timeError').classList.remove('show');
+    document.getElementById('btn2').disabled = false;
+
+    updateMiniSummary();
+  }
+
   function validateDetails(){
     const q=parseInt(document.getElementById('quantity').value);
     const invalid=!q||q<1||q>200;
@@ -764,6 +971,7 @@
     document.getElementById('fechaLabel').textContent = '';
     document.getElementById('p2fecha').textContent = '';
     document.getElementById('quantity').value = '1';
+
     [1,2,3].forEach(id => {
       eqSel[id] = false;
       eqQty[id] = 1;
@@ -772,20 +980,35 @@
       document.getElementById('ec' + id).classList.remove('sel');
       document.getElementById('er' + id).style.display = 'none';
     });
+
+    // Reset de botones de período
     document.getElementById('periodMorning').classList.add('active');
     document.getElementById('periodAfternoon').classList.remove('active');
+    document.getElementById('periodNight').classList.remove('active');
+
+    // Reset del selector de horario
+    const startSelect = document.getElementById('startTimeSelect');
+    const endSelect = document.getElementById('endTimeSelect');
+    startSelect.innerHTML = '<option value="">Seleccione hora</option>';
+    endSelect.innerHTML = '<option value="">Seleccione hora</option>';
+    startSelect.value = '';
+    endSelect.value = '';
+
+    document.getElementById('timeRangeDisplay').style.display = 'none';
+    document.getElementById('timeError').classList.remove('show');
+    document.getElementById('btnAllDay').classList.remove('active');
+
     clearSelectedTime();
     updateBar();
     updateIndicator();
     renderCal();
-    window.scrollTo({top:0,behavior:'smooth'});
+    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   function startTTL() {
     const badge   = document.getElementById('ttlBadge');
     const box     = document.getElementById('ttlBox');
     const display = document.getElementById('ttlDisplay');
-    const icon    = document.getElementById('ttlIcon');
     const label   = box.querySelector('p:first-child');
 
     const startTime = Date.now();
@@ -806,7 +1029,6 @@
         display.style.color   = '#991b1b';
         label.style.color     = '#991b1b';
         clearInterval(ttlInterval);
-        // Disable all continue buttons
         document.querySelectorAll('.btn-red').forEach(b => {
           b.disabled = true;
         });
@@ -823,7 +1045,6 @@
       box.style.borderColor = urgent ? '#fecaca'  : '#fde68a';
       display.style.color   = urgent ? '#991b1b'  : '#92400e';
       label.style.color     = urgent ? '#991b1b'  : '#92400e';
-
     }
 
     tick();
@@ -853,7 +1074,6 @@
   function tryGoStep(n){ if(n<=step) goStep(n); }
 
   function updateIndicator(){
-    const labels=['Seleccionar fecha','Seleccionar horario','Asistentes y equipo','Confirmación'];
     for(let i=1;i<=4;i++){
       const num=document.getElementById('sn'+i);
       const tit=document.getElementById('st'+i);
@@ -916,23 +1136,6 @@
 
   function cambiarMes(d){ calM+=d; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
   renderCal();
-
-  /* ── Step 2 ── */
-  function validateStep2(){
-    const s=document.getElementById('start_time').value;
-    const e=document.getElementById('end_time').value;
-    const lbl=document.getElementById('durLabel');
-    const btn=document.getElementById('btn2');
-    if(s&&e&&s<e){
-      const mins=(+e.split(':')[0]*60+ +e.split(':')[1])-(+s.split(':')[0]*60+ +s.split(':')[1]);
-      lbl.textContent='Duración: '+(Math.floor(mins/60)>0?Math.floor(mins/60)+'h ':'')+(mins%60>0?mins%60+'min':'');
-      lbl.style.color='#16a34a'; btn.disabled=false;
-    } else if(s&&e){
-      lbl.textContent='La hora de inicio debe ser menor que la hora de fin.';
-      lbl.style.color='#dc2626'; btn.disabled=true;
-    } else { lbl.textContent=''; btn.disabled=true; }
-    updateMiniSummary();
-  }
 
   /* ── Step 3 ── */
   function dq(d){ const inp=document.getElementById('quantity'); inp.value=Math.max(1,Math.min(200,parseInt(inp.value||1)+d)); updateBar(); }
@@ -1010,4 +1213,3 @@
 </script>
 </body>
 </html>
-
